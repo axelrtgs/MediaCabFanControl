@@ -19,7 +19,6 @@ void setup() {
 void loop() {
   if (api_input_complete) {
     Serial.println(api_input);
-
     reset_state(false);
   }
 }
@@ -35,13 +34,13 @@ void serialEvent() {
         api_input += inChar;
         if (inChar == '}') {
           api_input += '\0';
-          handle_json_msg(api_input);
+          handle_json_msg();
           reset_state(true);
         }
       case REST:
         if (inChar == '\n') {
           api_input += '\0';
-          handle_rest_msg(api_input);
+          handle_rest_msg();
           reset_state(true);
         } else {
           api_input += inChar;
@@ -60,14 +59,12 @@ void reset_state(bool input_complete) {
   }
 }
 
-void handle_json_msg(String encoded_json) {
-  api_input = encoded_json;
+void handle_json_msg() {
   Serial.print("JSON: ");
   Serial.println(api_input);
 }
 
-void handle_rest_msg(String rest_msg) {
-  api_input = rest_msg;
+void handle_rest_msg() {
   Serial.print("REST: ");
   Serial.println(api_input);
 }
