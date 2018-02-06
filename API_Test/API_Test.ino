@@ -1,6 +1,6 @@
 #include "API_Library.h"
 
-API_Library api = API_Library();
+API_Library api;
 
 void setup() {
   // put your setup code here, to run once:
