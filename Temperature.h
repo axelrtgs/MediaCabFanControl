@@ -9,22 +9,37 @@
 class Temperature
 {
   private:
-  DeviceAddress _deviceAddress;
+    DallasTemperature* _sensors;
+    uint8_t* _deviceAddress;
     double  _current;
     double  _minimum;
     double  _maximum;
     bool    _use_fahrenheight;
     const int DEFAULT_RESOLUTION = 9;
 
+    void printAddress(DeviceAddress deviceAddress) {
+      Serial.print("  { ");
+      for (uint8_t i = 0; i < 8; i++)
+      {
+        Serial.print("0x");
+        if (deviceAddress[i] < 0x10) Serial.print("0");
+        Serial.print(deviceAddress[i], HEX);
+        if (i < 7) Serial.print(", ");
+      }
+      Serial.println(" }");
+    }
 
   public:
-  Temperature(int pin, DeviceAddress deviceAddress) 
-  : OneWire oneWire(pin), 
-  DallasTemperature sensors(&oneWire) 
+    Temperature(DallasTemperature* sensors)
     {
-    _deviceAddress = deviceAddress;
-    sensors.begin();
-    setResolution(DEFAULT_RESOLUTION)
+      _sensors = sensors;
+      _sensors->begin();
+      setResolution(DEFAULT_RESOLUTION);
+    }
+
+    void setAddress(DeviceAddress deviceAddress)
+    {
+      _deviceAddress = deviceAddress;
     }
 
     void setTempLimits(double minimum, double maximum)
@@ -50,16 +65,34 @@ class Temperature
 
     void setResolution(int resolution)
     {
-    sensors.setResolution(resolution);
+      _sensors->setResolution(resolution);
     }
 
     double getTemperature()
     {
       if (_use_fahrenheight)
-      _current = sensors.getTempF(_deviceAddress);
+        _current = _sensors->getTempF(_deviceAddress);
       else
-      _current = sensors.getTempC(_deviceAddress);
+        _current = _sensors->getTempC(_deviceAddress);
       return _current;
+    }
+
+    void listDevices()
+    {
+      int deviceCount;
+      DeviceAddress tempDeviceAddress;
+
+      deviceCount = _sensors->getDeviceCount();
+      Serial.print("\nNumber of devices: ");
+      Serial.println(deviceCount);
+
+      for ( int i = 0; i < deviceCount; i++) {
+        _sensors->getAddress(tempDeviceAddress, i);
+        Serial.print("\nthe address for device ");
+        Serial.print(i);
+        Serial.print(" is: ");
+        printAddress(tempDeviceAddress);
+      }
     }
 };
 #endif

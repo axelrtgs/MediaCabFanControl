@@ -8,6 +8,7 @@
 class MAX6651
 {
   private:
+    I2C* _i2c;
     int _deviceAddress;
     const uint8_t CONFIG = 0x0A; // https://datasheets.maximintegrated.com/en/ds/MAX6650-MAX6651.pdf
     const uint8_t SECONDS_PER_MINUTE            = 60;
@@ -30,11 +31,11 @@ class MAX6651
       uint16_t fan4_rpm;
     };
 
-    MAX6651(int deviceAddress) 
-    : I2C(BUS_FREQUENCY) 
+    MAX6651(I2C* i2c, int deviceAddress)
     {
+      _i2c = i2c;
       _deviceAddress = deviceAddress;
-        I2C.writeData(_deviceAddress, CONFIG_REGISTER, CONFIG);
+      _i2c->writeData(_deviceAddress, CONFIG_REGISTER, CONFIG);
     }
 
     uint16_t getRPMFromPulses(uint8_t pulses)
@@ -45,16 +46,11 @@ class MAX6651
     TACH getTach()
     {
       TACH tach;
-        tach.fan1_rpm = getRPMFromPulses(I2C.readData(_deviceAddress, FAN1_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
-        tach.fan2_rpm = getRPMFromPulses(I2C.readData(_deviceAddress, FAN2_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
-        tach.fan3_rpm = getRPMFromPulses(I2C.readData(_deviceAddress, FAN3_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
-        tach.fan4_rpm = getRPMFromPulses(I2C.readData(_deviceAddress, FAN4_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
+      tach.fan1_rpm = getRPMFromPulses(_i2c->readData(_deviceAddress, FAN1_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
+      tach.fan2_rpm = getRPMFromPulses(_i2c->readData(_deviceAddress, FAN2_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
+      tach.fan3_rpm = getRPMFromPulses(_i2c->readData(_deviceAddress, FAN3_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
+      tach.fan4_rpm = getRPMFromPulses(_i2c->readData(_deviceAddress, FAN4_RPM_REGISTER, FAN_REGISTER_SIZE).toInt());
       return tach;
-    }
-
-    void scanBusAddresses() 
-    {
-        I2C.scan();
     }
 };
 #endif
