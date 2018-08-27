@@ -27,7 +27,7 @@ char json[BUFFER_SIZE_IN];
 WiFiMDNSResponder mdnsResponder;
 //WiFiServer server(80);
 
-template<typename T> void serialize_JSON(T client, bool pretty = false) 
+template<typename T> void serialize_JSON(T client, bool pretty = false)
 {
   DynamicJsonBuffer jsonBuffer(BUFFER_SIZE_OUT);
 
@@ -46,7 +46,7 @@ template<typename T> void serialize_JSON(T client, bool pretty = false)
   JsonObject& pwm = root.createNestedObject("pwm");
   pwm["pwm_duty"] = pwm_duty;
 
-  if(!pretty)
+  if (!pretty)
     root.printTo(client);
   else
     root.prettyPrintTo(client);
@@ -56,17 +56,17 @@ bool deserialize_JSON(String json)
 {
   if (DEBUG)
     printLine(json);
-    
+
   DynamicJsonBuffer jsonBuffer(BUFFER_SIZE_IN);
 
   JsonObject& root = jsonBuffer.parseObject(json);
-  if (!root.success()) 
+  if (!root.success())
   {
     Serial.println(F("JSON parsing failed!"));
     return false;
   }
   JsonObject& temp = root["temp"];
-  if (!temp.success()) 
+  if (!temp.success())
   {
     Serial.println("Temperature parsing failed!");
     return false;
@@ -74,14 +74,14 @@ bool deserialize_JSON(String json)
 
   JsonVariant target_temp = temp["target_temp"];
   JsonVariant use_fahrenheight = temp["use_fahrenheight"];
-  
-  if (target_temp.success() && use_fahrenheight.success()) 
+
+  if (target_temp.success() && use_fahrenheight.success())
   {
     temp_data.target_temp      = target_temp.as<double>();
     temp_data.use_fahrenheight  = use_fahrenheight.as<bool>();
     return true;
-  } 
-  else 
+  }
+  else
   {
     Serial.println("Temperature Fields parsing failed!!");
     return false;
@@ -92,7 +92,7 @@ boolean index_handler(TinyWebServer& web_server);
 boolean post_handler(TinyWebServer& web_server);
 boolean get_handler(TinyWebServer& web_server);
 
-TinyWebServer::PathHandler handlers[] = 
+TinyWebServer::PathHandler handlers[] =
 {
   {"/", TinyWebServer::GET, &index_handler },
   {"/get", TinyWebServer::GET, &get_handler },
@@ -100,7 +100,7 @@ TinyWebServer::PathHandler handlers[] =
   {NULL},
 };
 
-boolean index_handler(TinyWebServer& web_server) 
+boolean index_handler(TinyWebServer& web_server)
 {
   web_server.send_error_code(200);
   web_server.end_headers();
@@ -115,21 +115,21 @@ boolean index_handler(TinyWebServer& web_server)
   return true;
 }
 
-boolean get_handler(TinyWebServer& web_server) 
+boolean get_handler(TinyWebServer& web_server)
 {
   web_server.send_error_code(200);
   web_server.end_headers();
   web_server.send_content_type("application/json");
-  
+
   serialize_JSON(web_server);
   return true;
 }
 
-boolean post_handler(TinyWebServer& web_server) 
+boolean post_handler(TinyWebServer& web_server)
 {
   int ndx = 0;
   Client& client = web_server.get_client();
-  while(client.available()) 
+  while (client.available())
   {
     char ch = client.read();
     json[ndx] = ch;
@@ -140,17 +140,17 @@ boolean post_handler(TinyWebServer& web_server)
     web_server.send_error_code(200);
   else
     web_server.send_error_code(500);
-    
+
   web_server.end_headers();
   web_server.send_content_type("application/json");
   serialize_JSON(web_server);
-  
+
   return true;
 }
 
 TinyWebServer web = TinyWebServer(handlers, NULL);
 
-void printWiFiStatus() 
+void printWiFiStatus()
 {
   printLine("SSID: ", WiFi.SSID());
 
@@ -164,13 +164,13 @@ void printWiFiStatus()
   printLine("signal strength in dBm (RSSI): ", String(WiFi.RSSI()));
 }
 
-void WaitForWifiShielBlocking() 
+void WaitForWifiShielBlocking()
 {
   while (WiFi.status() == WL_NO_SHIELD)
     printLine("WiFi shield not present");
 }
 
-void ConnectToWIfiBlocking() 
+void ConnectToWIfiBlocking()
 {
   int status = WL_IDLE_STATUS;
   // attempt to connect to WiFi network:
@@ -185,7 +185,7 @@ void ConnectToWIfiBlocking()
   }
 }
 
-void initializeWifi() 
+void initializeWifi()
 {
   WaitForWifiShielBlocking();
   ConnectToWIfiBlocking();
@@ -201,7 +201,7 @@ void initializeWifi()
     Serial.println("Failed to start MDNS responder!");
 
   if (DEBUG || VERBOSE)
-      printLine(F("Server listening at http://{Name}.local: "), mdnsName);
+    printLine(F("Server listening at http://{Name}.local: "), mdnsName);
   web.begin();
 }
 
@@ -213,51 +213,51 @@ void WaitForWifi()
 
   web.process();
 
-//  // listen for incoming clients
-//  WiFiClient client = server.available();
-//  if (client) {
-//    if (DEBUG || VERBOSE)
-//      printLine("new  client");
-//    // an http request ends with a blank line
-//    boolean currentLineIsBlank = true;
-//    while (client.connected()) {
-//      if (client.available()) {
-//        char c = client.read();
-//        if (DEBUG)
-//          Serial.write(c);
-//        // if you've gotten to the end of the line (received a newline
-//        // character) and the line is blank, the http request has ended,
-//        // so you can send a reply
-//        if (c == '\n' && currentLineIsBlank) {
-//          // send a standard http response header
-//          client.println("HTTP/1.1 200 OK");
-//          client.println("Content-Type: text/html");
-//          client.println("Connection: close");  // the connection will be closed after completion of the response
-//          //client.println("Refresh: 5");  // refresh the page automatically every 5 sec
-//          client.println();
-//          client.println("<!DOCTYPE HTML>");
-//          client.println("<html>");
-//          client.print("Temp:");
-//          client.println(temp_data.temperature);
-//          client.println("<br />");
-//          client.println("</html>");
-//          break;
-//        }
-//        if (c == '\n')
-//          currentLineIsBlank = true;
-//        else if (c != '\r')
-//          currentLineIsBlank = false;
-//      }
-//    }
-//    // give the web browser time to receive the data
-//    delay(1);
-//
-//    // close the connection:
-//    client.stop();
-//    
-//    if (DEBUG || VERBOSE)
-//      printLine("Client disconnected");
-//  }
+  //  // listen for incoming clients
+  //  WiFiClient client = server.available();
+  //  if (client) {
+  //    if (DEBUG || VERBOSE)
+  //      printLine("new  client");
+  //    // an http request ends with a blank line
+  //    boolean currentLineIsBlank = true;
+  //    while (client.connected()) {
+  //      if (client.available()) {
+  //        char c = client.read();
+  //        if (DEBUG)
+  //          Serial.write(c);
+  //        // if you've gotten to the end of the line (received a newline
+  //        // character) and the line is blank, the http request has ended,
+  //        // so you can send a reply
+  //        if (c == '\n' && currentLineIsBlank) {
+  //          // send a standard http response header
+  //          client.println("HTTP/1.1 200 OK");
+  //          client.println("Content-Type: text/html");
+  //          client.println("Connection: close");  // the connection will be closed after completion of the response
+  //          //client.println("Refresh: 5");  // refresh the page automatically every 5 sec
+  //          client.println();
+  //          client.println("<!DOCTYPE HTML>");
+  //          client.println("<html>");
+  //          client.print("Temp:");
+  //          client.println(temp_data.temperature);
+  //          client.println("<br />");
+  //          client.println("</html>");
+  //          break;
+  //        }
+  //        if (c == '\n')
+  //          currentLineIsBlank = true;
+  //        else if (c != '\r')
+  //          currentLineIsBlank = false;
+  //      }
+  //    }
+  //    // give the web browser time to receive the data
+  //    delay(1);
+  //
+  //    // close the connection:
+  //    client.stop();
+  //
+  //    if (DEBUG || VERBOSE)
+  //      printLine("Client disconnected");
+  //  }
 }
 
 //Need to make generic to handle multiple types (i.e. ethernet shield, wifi shield, etc)
@@ -285,7 +285,7 @@ void WaitForWifi()
 //                if (ndx >= BUFFER_SIZE_IN) {
 //                    ndx = BUFFER_SIZE_IN - 1;
 //                }
-//            } 
+//            }
 //            else if (rc == endMarker && numNests > 1) {
 //              numNests--;
 //              json[ndx] = rc;

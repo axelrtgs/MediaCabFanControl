@@ -58,7 +58,7 @@ String mime_types =
 
 void *malloc_check(size_t size) {
   void* r = malloc(size);
-  if (DEBUG){
+  if (DEBUG) {
     if (!r) {
       Serial.print("TWS:No space for malloc: "); Serial.println(size, DEC);
     }
@@ -70,7 +70,7 @@ void *malloc_check(size_t size) {
 static const TinyWebServer::MimeType text_html_content_type = 4;
 
 TinyWebServer::TinyWebServer(PathHandler handlers[],
-			     const char** headers,
+                             const char** headers,
                              const int port)
   : handlers_(handlers),
     server_(port),
@@ -139,80 +139,80 @@ boolean TinyWebServer::process_headers() {
     if (DEBUG)
       Serial.print(ch);
     switch (state) {
-    case START_LINE:
-      if (ch == '\r') {
-	break;
-      } else if (ch == '\n') {
-	state = END_HEADERS;
-      } else if (isalnum(ch) || ch == '-') {
-	pos = 0;
-	buffer[pos++] = ch;
-	state = HEADER_NAME;
-      } else {
-	state = ERROR;
-      }
-      break;
+      case START_LINE:
+        if (ch == '\r') {
+          break;
+        } else if (ch == '\n') {
+          state = END_HEADERS;
+        } else if (isalnum(ch) || ch == '-') {
+          pos = 0;
+          buffer[pos++] = ch;
+          state = HEADER_NAME;
+        } else {
+          state = ERROR;
+        }
+        break;
 
-    case HEADER_NAME:
-      if (pos + 1 >= sizeof(buffer)) {
-	state = ERROR;
-	break;
-      }
-      if (ch == ':') {
-	buffer[pos] = 0;
-	header = buffer;
-	if (is_requested_header(&header)) {
-	  state = HEADER_VALUE_SKIP_INITIAL_SPACES;
-	} else {
-	  state = HEADER_IGNORE_VALUE;
-	}
-	pos = 0;
-      } else if (isalnum(ch) || ch == '-') {
-	buffer[pos++] = ch;
-      } else {
-	state = ERROR;
-	break;
-      }
-      break;
+      case HEADER_NAME:
+        if (pos + 1 >= sizeof(buffer)) {
+          state = ERROR;
+          break;
+        }
+        if (ch == ':') {
+          buffer[pos] = 0;
+          header = buffer;
+          if (is_requested_header(&header)) {
+            state = HEADER_VALUE_SKIP_INITIAL_SPACES;
+          } else {
+            state = HEADER_IGNORE_VALUE;
+          }
+          pos = 0;
+        } else if (isalnum(ch) || ch == '-') {
+          buffer[pos++] = ch;
+        } else {
+          state = ERROR;
+          break;
+        }
+        break;
 
-    case HEADER_VALUE_SKIP_INITIAL_SPACES:
-      if (pos + 1 >= sizeof(buffer)) {
-	state = ERROR;
-	break;
-      }
-      if (ch != ' ') {
-	buffer[pos++] = ch;
-	state = HEADER_VALUE;
-      }
-      break;
+      case HEADER_VALUE_SKIP_INITIAL_SPACES:
+        if (pos + 1 >= sizeof(buffer)) {
+          state = ERROR;
+          break;
+        }
+        if (ch != ' ') {
+          buffer[pos++] = ch;
+          state = HEADER_VALUE;
+        }
+        break;
 
-    case HEADER_VALUE:
-      if (pos + 1 >= sizeof(buffer)) {
-	state = ERROR;
-	break;
-      }
-      if (ch == '\n') {
-	buffer[pos] = 0;
-	if (!assign_header_value(header, buffer)) {
-	  state = ERROR;
-	  break;
-	}
-	state = START_LINE;
-      } else {
-	if (ch != '\r') {
-	  buffer[pos++] = ch;
-	}
-      }
-      break;
+      case HEADER_VALUE:
+        if (pos + 1 >= sizeof(buffer)) {
+          state = ERROR;
+          break;
+        }
+        if (ch == '\n') {
+          buffer[pos] = 0;
+          if (!assign_header_value(header, buffer)) {
+            state = ERROR;
+            break;
+          }
+          state = START_LINE;
+        } else {
+          if (ch != '\r') {
+            buffer[pos++] = ch;
+          }
+        }
+        break;
 
-    case HEADER_IGNORE_VALUE:
-      if (ch == '\n') {
-	state = START_LINE;
-      }
-      break;
+      case HEADER_IGNORE_VALUE:
+        if (ch == '\n') {
+          state = START_LINE;
+        }
+        break;
 
-    default:
-      break;
+      default:
+        break;
     }
 
     if (state == END_HEADERS) {
@@ -235,7 +235,7 @@ void TinyWebServer::process() {
   if (!buffer[0]) {
     return;
   }
-  if (DEBUG){
+  if (DEBUG) {
     Serial.print("TWS:New request: ");
     Serial.println(buffer);
   }
@@ -257,7 +257,7 @@ void TinyWebServer::process() {
   } else if (!strcmp("DELETE", request_type_str)) {
     request_type_ = DELETE;
   }
-  
+
   path_ = get_field(buffer, 1);
 
   // Process the headers.
@@ -278,7 +278,7 @@ void TinyWebServer::process() {
       regex_match = !strncmp(path_, handlers_[i].path, len - 1);
     }
     if ((exact_match || regex_match)
-	&& (handlers_[i].type == ANY || handlers_[i].type == request_type_)) {
+        && (handlers_[i].type == ANY || handlers_[i].type == request_type_)) {
       found = true;
       should_close = (handlers_[i].handler)(*this);
       break;
@@ -323,7 +323,7 @@ boolean TinyWebServer::assign_header_value(const char* header, char* value) {
     if (header == headers_[i].header) {
       headers_[i].value = (char*)malloc_check(strlen(value) + 1);
       if (!headers_[i].value) {
-	return false;
+        return false;
       }
       strcpy(headers_[i].value, value);
       found = true;
@@ -336,7 +336,7 @@ boolean TinyWebServer::assign_header_value(const char* header, char* value) {
 String content_type_msg = "Content-Type: ";
 
 void TinyWebServer::send_error_code(Client& client, int code) {
-  if (DEBUG){
+  if (DEBUG) {
     Serial.print("TWS:Returning ");
     Serial.println(code, DEC);
   }
@@ -365,7 +365,9 @@ void TinyWebServer::send_content_type(const char* content_type) {
   client_.println(content_type);
 }
 
-const char* TinyWebServer::get_path() { return path_; }
+const char* TinyWebServer::get_path() {
+  return path_;
+}
 
 const TinyWebServer::HttpRequestType TinyWebServer::get_type() {
   return request_type_;
@@ -399,7 +401,7 @@ char* TinyWebServer::decode_url_encoded(const char* s) {
     return NULL;
   }
   char* r = (char*)malloc_check(strlen(s) + 1);
-  if (!r){
+  if (!r) {
     return NULL;
   }
   char* r2 = r;
@@ -454,7 +456,7 @@ char* TinyWebServer::get_file_from_path(const char* path) {
 }
 
 TinyWebServer::MimeType TinyWebServer::get_mime_type_from_filename(
-    const char* filename) {
+  const char* filename) {
   MimeType r = text_html_content_type;
   if (!filename) {
     return r;
@@ -472,20 +474,20 @@ TinyWebServer::MimeType TinyWebServer::get_mime_type_from_filename(
       char* p = ext;
       ch = mime_types[i];
       while (*p && ch != '*' && toupper(*p) == ch) {
-	p++; i++;
-	ch = mime_types[i];
+        p++; i++;
+        ch = mime_types[i];
       }
       if (!*p && ch == '*') {
-	// We reached the end of the extension while checking
-	// equality with a MIME type: we have a match. Increment i
-	// to reach past the '*' char, and assign it to `mime_type'.
-	r = ++i;
-	break;
+        // We reached the end of the extension while checking
+        // equality with a MIME type: we have a match. Increment i
+        // to reach past the '*' char, and assign it to `mime_type'.
+        r = ++i;
+        break;
       } else {
-	// Skip past the the '|' character indicating the end of a
-	// MIME type.
-	while (mime_types[i++] != '|')
-	  ;
+        // Skip past the the '|' character indicating the end of a
+        // MIME type.
+        while (mime_types[i++] != '|')
+          ;
       }
     }
   }
