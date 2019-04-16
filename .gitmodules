@@ -1,2 +1,5 @@
 [submodule "main/lib/I2Cbus"]
 	url = https://github.com/natanaeljr/esp32-I2Cbus.git
+[submodule "main/lib/blufi"]
+	path = main/lib/blufi
+	url = https://github.com/wolfeidau/esp32-blufi.git
