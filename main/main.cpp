@@ -18,8 +18,7 @@
 //#include "FanControl.h"
 //#include "PIDEnhanced.h"
 
-
-#include "blufi_wireless.h"
+#include "blufi.h"
 
 
 //namespace
