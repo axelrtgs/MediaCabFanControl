@@ -5,6 +5,7 @@ set(COMPONENT_SRCS
         "lib/FanControl/FanControl.cpp"
         "lib/PID/PID.cpp"
         "lib/blufi/blufi.cpp"
+        "lib/homekit/homekit.c"
         )
 
 set(COMPONENT_ADD_INCLUDEDIRS
@@ -15,6 +16,7 @@ set(COMPONENT_ADD_INCLUDEDIRS
         "lib/PID"
         "lib/Misc"
         "lib/blufi"
+        "lib/homekit"
         "lib/util"
         )
 
@@ -22,4 +24,4 @@ set(COMPONENT_REQUIRES nvs_flash bt homekit)
 
 register_component()
 
-component_compile_options(-std=c++17)
+#component_compile_options(-std=c++17)

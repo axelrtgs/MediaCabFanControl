@@ -25,7 +25,7 @@ extern "C"
     #include "esp_task_wdt.h"
     #include "nvs_flash.h"
 
-//#include "FanControl.h"
+    #include "homekit.h"
 }
 
 
@@ -36,6 +36,7 @@ extern "C"
 //const uint8_t MAX31790_ADDRESS = 0x2F;
 //}
 std::shared_ptr<blufi::blufi> mblufi(new blufi::blufi());
+bool connected = false;
 
 extern "C" {
     void setupApp();
@@ -62,6 +63,7 @@ extern "C" {
 
         ret = nvs_flash_init();
         if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+            printf("No free pages erasing flash");
             ESP_ERROR_CHECK(nvs_flash_erase());
             ret = nvs_flash_init();
         }
@@ -72,7 +74,13 @@ extern "C" {
 
     void blufi_callback(blufi::WifiConnectionState state)
     {
-        if (state.wifiState == blufi::WifiAssociationState::CONNECTED) {
+        if (state.wifiState == blufi::WifiAssociationState::CONNECTED && !connected) {
+            printf("Wifi connected Starting homekit\n");
+            homekit_init();
+            connected = true;
+        } else if (state.wifiState == blufi::WifiAssociationState::DISCONNECTED && connected) {
+            printf("Wifi disconnected\n");
+            connected = false;
         }
     }
 
