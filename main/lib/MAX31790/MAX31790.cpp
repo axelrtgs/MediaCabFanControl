@@ -298,7 +298,19 @@ esp_err_t MAX31790::writePWMTarget(const uint8_t& index, const uint16_t& data)
     if (index > NR_CHANNEL || data < PWM_MIN || data > PWM_MAX)
         return ESP_ERR_INVALID_ARG;
 
-    return _i2c->writeByte(_deviceAddress, static_cast<uint8_t>(PWMTarget[index]), data << PWM_SHIFT_BITS);
+    uint16_t shiftData = data << PWM_SHIFT_BITS;
+    const uint8_t numBytes = 2;
+    const bool reverse = false;
+
+    uint8_t dataArray[2];
+    if (reverse) {
+        dataArray[0] = shiftData & 0xff;
+        dataArray[1] = shiftData >> 8;
+    } else {
+        dataArray[0] = shiftData >> 8;
+        dataArray[1] = shiftData & 0xff;
+    }
+    return _i2c->writeBytes(_deviceAddress, static_cast<uint8_t>(PWMTarget[index]), numBytes, dataArray);
 }
 
 esp_err_t MAX31790::readTachTargetRaw(const uint8_t& index, uint16_t* data)
@@ -372,11 +384,11 @@ esp_err_t MAX31790::writeTachTargetRaw(const uint8_t& index, uint16_t data, cons
 
     uint8_t dataArray[2];
     if (reverse) {
-        dataArray[0] = data >> 8;
-        dataArray[1] = data & 0xff;
-    } else {
         dataArray[0] = data & 0xff;
         dataArray[1] = data >> 8;
+    } else {
+        dataArray[0] = data >> 8;
+        dataArray[1] = data & 0xff;
     }
 
     return _i2c->writeBytes(_deviceAddress, static_cast<uint8_t>(TachTarget[index]), numBytes, dataArray);
