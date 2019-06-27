@@ -22,8 +22,8 @@ class PIDEnhanced
       _conservative = conservative;
       _aggressive = aggressive;
 
-      _PID = new PID(&_input, &_target, &_output, minDuty, maxDuty, _conservative.Kp, _conservative.Ki, _conservative.Kd);
-      //_PID->setBangBang(_tolerance);
+      _PID = new PID(&_input, &_target, &_output, minDuty, maxDuty, _conservative.Kp, _conservative.Ki, _conservative.Kd, P_ON_E, REVERSE);
+      _PID->setBangBang(_tolerance);
       _PID->setTimeStep(4000);
     }
 

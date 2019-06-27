@@ -1,6 +1,3 @@
-#define CONFIG_I2CBUS_LOG_READWRITES
-#define CONFIG_I2CBUS_LOG_RW_LEVEL_INFO
-
 //#include <stdio.h>
 //#include <stdlib.h>
 //#include <stdint.h>
@@ -13,6 +10,8 @@
 
 extern "C"
 {
+    #include <freertos/FreeRTOS.h>
+    #include <freertos/task.h>
     //#include "freertos/event_groups.h"
     //#include "esp_system.h"
     //#include "esp_wifi.h"
@@ -30,12 +29,13 @@ extern "C"
 
 namespace
 {
-const uint32_t I2C_BUS_SPEED = 400000;
-const uint8_t MAX31790_ADDRESS = 0x2F;
+    const uint32_t I2C_BUS_SPEED = 400000;
+    const uint8_t MAX31790_ADDRESS = 0x2F;
 }
 
 std::shared_ptr<blufi::blufi> mblufi(new blufi::blufi());
 bool connected = false;
+fan_kit fanKit;
 
 extern "C" {
     void setupApp();
@@ -73,20 +73,7 @@ extern "C" {
         mblufi->registerCallback(blufi_callback);
     }
 
-    void blufi_callback(blufi::WifiConnectionState state)
-    {
-        if (state.wifiState == blufi::WifiAssociationState::CONNECTED && !connected) {
-            printf("Wifi connected Starting homekit\n");
-            homekit_init();
-            connected = true;
-            setupApp();
-        } else if (state.wifiState == blufi::WifiAssociationState::DISCONNECTED && connected) {
-            printf("Wifi disconnected\n");
-            connected = false;
-        }
-    }
-
-    void setupApp()
+    void valuesTask(void *_args)
     {
         printf("Starting FanControl \n");
         I2C_t& myI2C = i2c0;  // i2c0 and i2c1 are the default objects
@@ -103,54 +90,77 @@ extern "C" {
         printf("FanControl Initialized \n");
 
         PIDEnhanced::PID_TUNING conservative_tune
-        {
-            .Kp = -10.0,
-            .Ki = 0.0,
-            .Kd = 0.0
-        };
+            {
+                .Kp = 10,
+                .Ki = 1,
+                .Kd = 0
+            };
 
         PIDEnhanced::PID_TUNING aggressive_tune
-        {
-            .Kp = -10.0,
-            .Ki = 0.0,
-            .Kd = 0.0
-        };
+            {
+                .Kp = 50,
+                .Ki = 10,
+                .Kd = 0
+            };
 
         PIDEnhanced*   _PID;
-        std::vector<double> inputVector = {50.0, 50.0};
-        double   _PID_target = 50.0;
         double   _PID_output;
+        const int tolerance = false;
 
-        _PID = new PIDEnhanced(10, 0, 511, conservative_tune, aggressive_tune);
-        std::string PID_Profile = _PID->computeAvgOfVector(inputVector, _PID_target, &_PID_output);
+        _PID = new PIDEnhanced(tolerance, PWM_MIN, PWM_MAX, conservative_tune, aggressive_tune);
+        while(1)
+        {
 
-        printf("PID Profile: %s \n", PID_Profile.c_str());
+            std::vector<double> inputVector = {fanKit.cur_temp};
+            printf("Mode: %d CurTemp: %f, TargTemp: %f\n", fanKit.mode, fanKit.cur_temp, fanKit.target_temp);
+            std::string PID_Profile = _PID->computeAvgOfVector(inputVector, fanKit.target_temp, &_PID_output);
 
-        printf("PID Out: %f \n", _PID_output);
+            printf("PID Profile: %s \n", PID_Profile.c_str());
 
-        uint16_t pwmDuty[NUM_PWM];
-        fanControl->getPWMDutyComplete(pwmDuty);
-
-        for (auto it = std::begin(pwmDuty); it != std::end(pwmDuty); ++it) {
-            printf("PWM duty is: %d\n", *it);
+            printf("PID Out: %f \n", _PID_output);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
-
-        uint16_t pwmTarget[NUM_PWM];
-        fanControl->getPWMTargetComplete(pwmTarget);
-
-        for (auto it = std::begin(pwmTarget); it != std::end(pwmTarget); ++it) {
-            printf("PWM target is: %d\n", *it);
-        }
-
-        uint16_t pwmNewTarget[] = { 300, 511, 450, 225 };
-        fanControl->setPWMTargetComplete(pwmNewTarget);
-
-        fanControl->getPWMTargetComplete(pwmTarget);
-
-        for (auto it = std::begin(pwmTarget); it != std::end(pwmTarget); ++it) {
-            printf("New PWM target is: %d\n", *it);
-        }
-
-        fflush(stdout);
     }
+
+    void blufi_callback(blufi::WifiConnectionState state)
+    {
+        if (state.wifiState == blufi::WifiAssociationState::CONNECTED && !connected) {
+            printf("Wifi connected Starting homekit\n");
+            homekit_init(&fanKit);
+            connected = true;
+            //setupApp();
+            xTaskCreate(valuesTask, "Values", 2048, NULL, 2, NULL);
+        } else if (state.wifiState == blufi::WifiAssociationState::DISCONNECTED && connected) {
+            printf("Wifi disconnected\n");
+            connected = false;
+        }
+    }
+
+    //void setupApp()
+    //{
+    //    uint16_t pwmDuty[NUM_PWM];
+    //    fanControl->getPWMDutyComplete(pwmDuty);
+    //
+    //    for (auto it = std::begin(pwmDuty); it != std::end(pwmDuty); ++it) {
+    //        printf("PWM duty is: %d\n", *it);
+    //    }
+    //
+    //    uint16_t pwmTarget[NUM_PWM];
+    //    fanControl->getPWMTargetComplete(pwmTarget);
+    //
+    //    for (auto it = std::begin(pwmTarget); it != std::end(pwmTarget); ++it) {
+    //        printf("PWM target is: %d\n", *it);
+    //    }
+    //
+    //    uint16_t pwmNewTarget[] = { 300, 511, 450, 225 };
+    //    fanControl->setPWMTargetComplete(pwmNewTarget);
+    //
+    //    fanControl->getPWMTargetComplete(pwmTarget);
+    //
+    //    for (auto it = std::begin(pwmTarget); it != std::end(pwmTarget); ++it) {
+    //        printf("New PWM target is: %d\n", *it);
+    //    }
+    //
+    //    fflush(stdout);
+    //}
 }

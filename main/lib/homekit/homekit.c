@@ -15,8 +15,8 @@ void on_update(homekit_characteristic_t *ch, homekit_value_t value, void *contex
 homekit_characteristic_t current_temperature = HOMEKIT_CHARACTERISTIC_(CURRENT_TEMPERATURE, 0.0);
 homekit_characteristic_t target_temperature = HOMEKIT_CHARACTERISTIC_(TARGET_TEMPERATURE, 22.0, .callback=HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
 homekit_characteristic_t units = HOMEKIT_CHARACTERISTIC_(TEMPERATURE_DISPLAY_UNITS, 0);
-homekit_characteristic_t current_state = HOMEKIT_CHARACTERISTIC_(CURRENT_HEATING_COOLING_STATE, 0);
-homekit_characteristic_t target_state = HOMEKIT_CHARACTERISTIC_(TARGET_HEATING_COOLING_STATE, 0, .callback=HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
+homekit_characteristic_t current_state = HOMEKIT_CHARACTERISTIC_(CURRENT_HEATING_COOLING_STATE, OFF);
+homekit_characteristic_t target_state = HOMEKIT_CHARACTERISTIC_(TARGET_HEATING_COOLING_STATE, COOL, .callback=HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
 homekit_characteristic_t cooling_threshold = HOMEKIT_CHARACTERISTIC_(COOLING_THRESHOLD_TEMPERATURE, 25.0, .callback=HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
 homekit_characteristic_t heating_threshold = HOMEKIT_CHARACTERISTIC_(HEATING_THRESHOLD_TEMPERATURE, 15.0, .callback=HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
 
@@ -30,13 +30,7 @@ const uint32_t TEMPERATURE_POLL_PERIOD = 10000;
 const uint8_t led_gpio = 2;
 const bool led_on = false;
 
-enum target_state_value {
-    OFF = 0,
-    HEAT,
-    COOL,
-    AUTO,
-};
-
+// TODO: Persist state across reboots
 void update_state() {
     enum target_state_value targ_state = target_state.value.int_value;
     enum target_state_value cur_state = current_state.value.int_value;
@@ -80,6 +74,9 @@ void update_state() {
             //fanOff();
         }
     }
+    extern_values->cur_temp = curr_temp;
+    extern_values->target_temp = target_temp;
+    extern_values->mode = cur_state;
 }
 
 void on_update(homekit_characteristic_t *ch, homekit_value_t value, void *context) {
@@ -126,9 +123,12 @@ void temperature_sensor_task(void *_args) {
     //coolerOff();
 
     float temperature_value;
+    srand (1);
     while (1) {
-        bool success = read_temp_data(&temperature_value);
+        //bool success = read_temp_data(&temperature_value);
+        bool success = true;
         if (success) {
+            temperature_value = rand() % 45 + 5;
             printf("Got readings: temperature %g\n", temperature_value);
             current_temperature.value = HOMEKIT_FLOAT(temperature_value);
 
@@ -138,12 +138,13 @@ void temperature_sensor_task(void *_args) {
         } else {
             printf("Couldnt read data from sensor\n");
         }
+
         vTaskDelay(TEMPERATURE_POLL_PERIOD / portTICK_PERIOD_MS);
     }
 }
 
 void thermostat_init() {
-    xTaskCreate(temperature_sensor_task, "Thermostat", 256, NULL, 2, NULL);
+    xTaskCreate(temperature_sensor_task, "Thermostat", 2048, NULL, 2, NULL);
 }
 
 homekit_accessory_t *accessories[] = {
@@ -179,11 +180,21 @@ homekit_server_config_t config = {
     .setupId = "1QJ8",
 };
 
-void homekit_init()
+void homekit_init(fan_kit* fanKit)
 {
+    extern_values = fanKit;
+
+    extern_values->cur_temp = current_temperature.value.float_value;
+    extern_values->target_temp = target_temperature.value.float_value;
+    extern_values->mode = current_state.value.int_value;
+
+    homekit_characteristic_notify(&current_temperature, current_temperature.value);
+    homekit_characteristic_notify(&target_temperature, target_temperature.value);
+    homekit_characteristic_notify(&current_state, current_state.value);
+
     led_init();
 
-    //thermostat_init();
+    thermostat_init();
 
     homekit_server_init(&config);
 }

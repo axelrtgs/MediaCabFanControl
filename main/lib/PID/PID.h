@@ -8,58 +8,35 @@
 class PID
 {
 public:
-    // Constructor - takes pointer inputs for control variables, so they are updated automatically
+    #define DIRECT 0
+    #define REVERSE 1
+    #define P_ON_M 0
+    #define P_ON_E 1
+    #define SECOND 1000000.0
+
     PID(double *input, double *setpoint, double *output, double outputMin, double outputMax,
-            double Kp, double Ki, double Kd);
-    // Allows manual adjustment of gains
-    void setGains(double Kp, double Ki, double Kd);
-    // Sets bang-bang control ranges, separate upper and lower offsets, zero for off
-    void setBangBang(double bangOn, double bangOff);
-    // Sets bang-bang control range +-single offset
+            double Kp, double Ki, double Kd, int pOn, int controllerDirection);
+    void SetOutputLimits(double Min, double Max);
+    void setGains(double Kp, double Ki, double Kd, int pOn);
+    void setGains(double Kp, double Ki, double Kd);void setBangBang(double bangOn, double bangOff);
     void setBangBang(double bangRange);
-    // Allows manual readjustment of output range
-    void setOutputRange(double outputMin, double outputMax);
-    // Allows manual adjustment of time step (default 1000ms)
     void setTimeStep(int64_t timeStep);
-    // Returns true when at set point (+-threshold)
     bool atSetPoint(double threshold);
-    // Runs PID calculations when needed. Should be called repeatedly in loop.
-    // Automatically reads input and sets output via pointers
     void run();
-    // Stops PID functionality, output sets to
     void stop();
     void reset();
     bool isStopped();
-
-    double getIntegral();
-    void setIntegral(double integral);
+    void SetControllerDirection(int Direction);
 
 private:
     double _Kp, _Ki, _Kd;
-    double _integral, _previousError;
+    double _previousInput;
     double _bangOn, _bangOff;
     double *_input, *_setpoint, *_output;
-    double _outputMin, _outputMax;
+    double _outputMin, _outputMax, _outputSum;
     int64_t _timeStep, _lastStep;
-    bool _stopped;
-};
-
-class PIDRelay : public PID {
-public:
-
-    PIDRelay(double *input, double *setpoint, bool *relayState, double pulseWidth, double Kp, double Ki, double Kd)
-        : PID(input, setpoint, &_pulseValue, 0, 1.0, Kp, Ki, Kd) {
-        _relayState = relayState;
-        _pulseWidth = pulseWidth;
-    };
-
-    void run();
-
-    double getPulseValue();
-
-private:
-    bool * _relayState;
-    unsigned long _pulseWidth, _lastPulseTime;
-    double _pulseValue;
+    int _controllerDirection;
+    int _pOn;
+    bool _stopped, _pOnE;
 };
 #endif
