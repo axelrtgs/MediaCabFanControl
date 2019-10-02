@@ -6,9 +6,6 @@
 [submodule "components/wolfssl"]
 	path = components/wolfssl
 	url = https://github.com/maximkulkin/esp-wolfssl.git
-[submodule "components/cJSON"]
-	path = components/cJSON
-	url = https://github.com/maximkulkin/esp-cjson.git
 [submodule "components/http-parser"]
 	path = components/http-parser
 	url = https://github.com/maximkulkin/esp-http-parser.git
