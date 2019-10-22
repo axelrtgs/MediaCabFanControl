@@ -20,7 +20,7 @@ set(COMPONENT_ADD_INCLUDEDIRS
         "lib/util"
         )
 
-set(COMPONENT_REQUIRES nvs_flash bt homekit)
+set(COMPONENT_REQUIRES nvs_flash bt homekit owb ds18b20)
 
 register_component()
 

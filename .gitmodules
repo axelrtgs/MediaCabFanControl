@@ -9,3 +9,9 @@
 [submodule "components/http-parser"]
 	path = components/http-parser
 	url = https://github.com/maximkulkin/esp-http-parser.git
+[submodule "components/ds18b20"]
+	path = components/ds18b20
+	url = https://github.com/DavidAntliff/esp32-ds18b20.git
+[submodule "components/owb"]
+	path = components/owb
+	url = https://github.com/DavidAntliff/esp32-owb.git

@@ -31,6 +31,7 @@ namespace
 {
     const uint32_t I2C_BUS_SPEED = 400000;
     const uint8_t MAX31790_ADDRESS = 0x2F;
+    const uint32_t TEMPERATURE_POLL_PERIOD = 5000;
 }
 
 std::shared_ptr<blufi::blufi> mblufi(new blufi::blufi());
@@ -98,16 +99,19 @@ extern "C" {
 
         PIDEnhanced::PID_TUNING aggressive_tune
             {
-                .Kp = 50,
-                .Ki = 10,
+                .Kp = 20,
+                .Ki = 3,
                 .Kd = 0
             };
 
         PIDEnhanced*   _PID;
         double   _PID_output;
-        const int tolerance = false;
+        const int tolerance = 10;
+        const int bang_on = false;
+        const int bang_off = false;
 
-        _PID = new PIDEnhanced(tolerance, PWM_MIN, PWM_MAX, conservative_tune, aggressive_tune);
+
+        _PID = new PIDEnhanced(tolerance, bang_on, bang_off, PWM_MIN, PWM_MAX, conservative_tune, aggressive_tune);
         while(1)
         {
 
@@ -118,7 +122,7 @@ extern "C" {
             printf("PID Profile: %s \n", PID_Profile.c_str());
 
             printf("PID Out: %f \n", _PID_output);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            vTaskDelay(TEMPERATURE_POLL_PERIOD / portTICK_PERIOD_MS);
         }
     }
 

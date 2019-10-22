@@ -16,15 +16,15 @@ class PIDEnhanced
       double Kd;
     };
 
-    PIDEnhanced(const int &tolerance, const int &minDuty, const int &maxDuty, const PID_TUNING &conservative, const PID_TUNING &aggressive)
+    PIDEnhanced(const int &tolerance, const int &bang_on, const int &bang_off, const int &minDuty, const int &maxDuty, const PID_TUNING &conservative, const PID_TUNING &aggressive)
     {
       _tolerance = tolerance;
       _conservative = conservative;
       _aggressive = aggressive;
 
       _PID = new PID(&_input, &_target, &_output, minDuty, maxDuty, _conservative.Kp, _conservative.Ki, _conservative.Kd, P_ON_E, REVERSE);
-      _PID->setBangBang(_tolerance);
-      _PID->setTimeStep(4000);
+      _PID->setBangBang(bang_on, bang_off);
+      _PID->setTimeStep(5000);
     }
 
     inline std::string computeAvgOfVector(const std::vector<double> &temperature, const double &target, double* output)

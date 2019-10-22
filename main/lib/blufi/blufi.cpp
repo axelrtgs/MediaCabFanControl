@@ -145,7 +145,7 @@ namespace blufi
                 info.sta_ssid = gl_sta_ssid;
                 info.sta_ssid_len = gl_sta_ssid_len;
                 esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, &info);
-                callback(WifiAssociationState::CONNECTED);
+                callback(WifiAssociationState::CONNECTED6);
                 break;
             }
             case SYSTEM_EVENT_STA_CONNECTED:

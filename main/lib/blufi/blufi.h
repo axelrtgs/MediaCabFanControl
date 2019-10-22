@@ -61,8 +61,9 @@ namespace blufi
     enum class WifiAssociationState: int
     {
         CONNECTED = 0,
-        DISCONNECTED = 1,
-        CONNECTING = 2
+        CONNECTED6 = 1,
+        DISCONNECTED = 2,
+        CONNECTING = 3
     };
 
     struct WifiConnectionState
