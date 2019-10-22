@@ -2,20 +2,48 @@
 #include "PID.h"
 
 PID::PID(double *input, double *setpoint, double *output, double outputMin, double outputMax,
-                 double Kp, double Ki, double Kd) {
+                 double Kp, double Ki, double Kd, int pOn, int controllerDirection) {
     _input = input;
     _setpoint = setpoint;
     _output = output;
-    _outputMin = outputMin;
-    _outputMax = outputMax;
-    setGains(Kp, Ki, Kd);
-    _timeStep = 1000000;//1 second
+    SetOutputLimits(outputMin, outputMax);
+    setGains(Kp, Ki, Kd, pOn);
+    SetControllerDirection(controllerDirection);
+    _timeStep = SECOND;
 }
 
-void PID::setGains(double Kp, double Ki, double Kd) {
+void PID::SetOutputLimits(double min, double max) {
+    if(min >= max) return;
+    _outputMin = min;
+    _outputMax = max;
+
+    if(*_output > _outputMax) *_output = _outputMax;
+    else if(*_output < _outputMin) *_output = _outputMin;
+
+    if(_outputSum > _outputMax) _outputSum= _outputMax;
+    else if(_outputSum < _outputMin) _outputSum= _outputMin;
+}
+
+void PID::setGains(double Kp, double Ki, double Kd, int pOn) {
+    if (Kp<0 || Ki<0 || Kd<0) return;
+
+    _pOn = pOn;
+    _pOnE = pOn == P_ON_E;
+    double sampleTimeInSec = _timeStep / SECOND;
     _Kp = Kp;
-    _Ki = Ki;
-    _Kd = Kd;
+    _Ki = Ki * sampleTimeInSec;
+    _Kd = Kd / sampleTimeInSec;
+
+    if(_controllerDirection == REVERSE)
+    {
+        _Kp = (0 - _Kp);
+        _Ki = (0 - _Ki);
+        _Kd = (0 - _Kd);
+    }
+}
+
+void PID::setGains(double Kp, double Ki, double Kd){
+    setGains(Kp, Ki, Kd, _pOn);
 }
 
 void PID::setBangBang(double bangOn, double bangOff) {
@@ -27,13 +55,13 @@ void PID::setBangBang(double bangRange) {
     setBangBang(bangRange, bangRange);
 }
 
-void PID::setOutputRange(double outputMin, double outputMax) {
-    _outputMin = outputMin;
-    _outputMax = outputMax;
-}
-
 void PID::setTimeStep(int64_t timeStep){
-    _timeStep = timeStep;
+    if (timeStep > 0) {
+        double ratio = (double) timeStep / (double) _timeStep;
+        _Ki *= ratio;
+        _Kd /= ratio;
+        _timeStep = timeStep;
+    }
 }
 
 
@@ -46,58 +74,58 @@ void PID::run() {
         _stopped = false;
         reset();
     }
-    //if bang thresholds are defined and we're outside of them, use bang-bang control
+
+    uint64_t now = esp_timer_get_time();
+
     if (_bangOn && ((*_setpoint - *_input) > _bangOn)) {
         *_output = _outputMax;
-        _lastStep = esp_timer_get_time();
+        _lastStep = now;
     } else if (_bangOff && ((*_input - *_setpoint) > _bangOff)) {
         *_output = _outputMin;
-        _lastStep = esp_timer_get_time();
-    } else {                                    //otherwise use PID control
-        unsigned long _dT = esp_timer_get_time() - _lastStep;   //calculate time since last update
-        if (_dT >= _timeStep) {                     //if long enough, do PID calculations
-            _lastStep = esp_timer_get_time();
-            double _error = *_setpoint - *_input;
-            _integral += (_error + _previousError) / 2 * _dT / 1000.0;   //Riemann sum integral
-            //_integral = constrain(_integral, _outputMin/_Ki, _outputMax/_Ki);
-            double _dError = (_error - _previousError) / _dT / 1000.0;   //derivative
-            _previousError = _error;
-            double PID = (_Kp * _error) + (_Ki * _integral) + (_Kd * _dError);
-            //*_output = _outputMin + (constrain(PID, 0, 1) * (_outputMax - _outputMin));
-            *_output = clamp(PID, _outputMin, _outputMax);
+        _lastStep = now;
+    } else {
+        if (now - _lastStep >= _timeStep) {
+            _lastStep = now;
+            double error = *_setpoint - *_input;
+            double dInput = *_input - _previousInput;
+            _outputSum += _Ki * error;
+
+            if(!_pOnE) _outputSum -= _Kp * dInput;
+
+            _outputSum = clamp(_outputSum, _outputMin, _outputMax);
+
+            double output = _pOnE ? _Kp * error : 0;
+
+            output += _outputSum - _Kd * dInput;
+
+           *_output = clamp(output, _outputMin, _outputMax);
+            _previousInput = *_input;
         }
     }
+}
+
+void PID::SetControllerDirection(int Direction)
+{
+    if(Direction != _controllerDirection)
+    {
+        _Kp = (0 - _Kp);
+        _Ki = (0 - _Ki);
+        _Kd = (0 - _Kd);
+    }
+    _controllerDirection = Direction;
 }
 
 void PID::stop() {
     _stopped = true;
     reset();
 }
+
 void PID::reset() {
     _lastStep = esp_timer_get_time();
-    _integral = 0;
-    _previousError = 0;
+    _outputSum = 0;
+    _previousInput = 0;
 }
 
 bool PID::isStopped(){
     return _stopped;
-}
-
-double PID::getIntegral(){
-    return _integral;
-}
-
-void PID::setIntegral(double integral){
-    _integral = integral;
-}
-
-void PIDRelay::run() {
-    PID::run();
-    while ((esp_timer_get_time() - _lastPulseTime) > _pulseWidth) _lastPulseTime += _pulseWidth;
-    *_relayState = ((esp_timer_get_time() - _lastPulseTime) < (_pulseValue * _pulseWidth));
-}
-
-
-double PIDRelay::getPulseValue(){
-    return (isStopped()?0:_pulseValue);
 }

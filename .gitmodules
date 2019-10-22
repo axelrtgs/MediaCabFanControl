@@ -1,2 +1,17 @@
 [submodule "main/lib/I2Cbus"]
 	url = https://github.com/natanaeljr/esp32-I2Cbus.git
+[submodule "components/homekit"]
+	path = components/homekit
+	url = https://github.com/maximkulkin/esp-homekit.git
+[submodule "components/wolfssl"]
+	path = components/wolfssl
+	url = https://github.com/maximkulkin/esp-wolfssl.git
+[submodule "components/http-parser"]
+	path = components/http-parser
+	url = https://github.com/maximkulkin/esp-http-parser.git
+[submodule "components/ds18b20"]
+	path = components/ds18b20
+	url = https://github.com/DavidAntliff/esp32-ds18b20.git
+[submodule "components/owb"]
+	path = components/owb
+	url = https://github.com/DavidAntliff/esp32-owb.git
