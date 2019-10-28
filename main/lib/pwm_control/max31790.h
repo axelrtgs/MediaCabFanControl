@@ -460,33 +460,28 @@ public:
 
     esp_err_t readUserByte(); // Not Implemented yet
     esp_err_t writeUserByte(); // Not Implemented yet
+
     esp_err_t readFanFaultStatus(const uint8_t& index); // Not Implemented yet
     esp_err_t readFanFaultMask(const uint8_t& index); // Not Implemented yet
     esp_err_t writeFanFaultMask(const uint8_t& index); // Not Implemented yet
-    esp_err_t readFanOptions(FANOPTIONS* fanOptions);
 
+    esp_err_t readFanOptions(FANOPTIONS* fanOptions);
     esp_err_t writeFanOptions(const FANOPTIONS& fanOptions);
 
     esp_err_t readTachRaw(const uint8_t& index, uint16_t* data);
-
     esp_err_t readTachRPM(const uint8_t& index, uint16_t* data);
-
     esp_err_t readPWMDuty(const uint8_t& index, uint16_t* data);
 
     esp_err_t readPWMTarget(const uint8_t& index, uint16_t* data);
-
     esp_err_t writePWMTarget(const uint8_t& index, const uint16_t& data);
 
     esp_err_t readTachTargetRaw(const uint8_t& index, uint16_t* data);
-
-    esp_err_t readTachTargetRPM(const uint8_t& index, uint16_t* data);
-
     esp_err_t writeTachTargetRaw(const uint8_t& index, uint16_t data, const Speed_Range& speedRange);
 
+    esp_err_t readTachTargetRPM(const uint8_t& index, uint16_t* data);
     esp_err_t writeTachTargetRPM(const uint8_t& index, uint16_t data);
 
     esp_err_t readWindow(const uint8_t& index, uint8_t* data);
-
     esp_err_t writeWindow(const uint8_t& index, const uint8_t& data);
 
 private:
@@ -498,48 +493,37 @@ private:
         switch (speedRange) {
             case Speed_Range::SR_1 :
                 return 1;
-                break;
             case Speed_Range::SR_2 :
                 return 2;
-                break;
             case Speed_Range::SR_4 :
                 return 4;
-                break;
             case Speed_Range::SR_8 :
                 return 8;
-                break;
             case Speed_Range::SR_16 :
                 return 16;
-                break;
             case Speed_Range::SR_32_1 :
             case Speed_Range::SR_32_2 :
             case Speed_Range::SR_32_3 :
                 return 32;
-                break;
             default :
                 return 0;
-                break;
         }
     }
 
     inline Speed_Range speedRangeFromRPM(const uint16_t& rpm)
     {
-        Speed_Range bits;
-
         if (rpm < 500)
-            bits = Speed_Range::SR_1;
+            return Speed_Range::SR_1;
         else if (rpm < 1000)
-            bits = Speed_Range::SR_2;
+            return Speed_Range::SR_2;
         else if (rpm < 2000)
-            bits = Speed_Range::SR_4;
+            return Speed_Range::SR_4;
         else if (rpm < 4000)
-            bits = Speed_Range::SR_8;
+            return Speed_Range::SR_8;
         else if (rpm < 8000)
-            bits = Speed_Range::SR_16;
+            return Speed_Range::SR_16;
         else
-            bits = Speed_Range::SR_32_1;
-
-        return bits;
+            return Speed_Range::SR_32_1;
     }
 };
 

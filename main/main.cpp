@@ -1,10 +1,8 @@
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <stdint.h>
+
 #include <memory>
 
-#include "FanControl.h"
-#include "PIDEnhanced.h"
+#include "pwm_control.h"
+#include "pid_enhanced.h"
 
 #include "blufi.h"
 
@@ -12,13 +10,7 @@ extern "C"
 {
     #include <freertos/FreeRTOS.h>
     #include <freertos/task.h>
-    //#include "freertos/event_groups.h"
-    //#include "esp_system.h"
-    //#include "esp_wifi.h"
-    //#include "esp_event_loop.h"
-    //#include "esp_spi_flash.h"
     #include "driver/gpio.h"
-    //#include "esp_log.h"
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
     #include "esp_task_wdt.h"

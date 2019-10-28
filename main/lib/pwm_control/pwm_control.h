@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MAX31790.h"
+#include "max31790.h"
 #include "esp_err.h"
 
 #ifndef FanControl_h

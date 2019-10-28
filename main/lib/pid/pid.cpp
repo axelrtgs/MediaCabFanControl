@@ -1,5 +1,5 @@
-#include <lib/Misc/Utilities.h>
-#include "PID.h"
+#include <utilities.h>
+#include "pid.h"
 
 PID::PID(double *input, double *setpoint, double *output, double outputMin, double outputMax,
                  double Kp, double Ki, double Kd, int pOn, int controllerDirection) {

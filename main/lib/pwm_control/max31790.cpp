@@ -1,4 +1,4 @@
-#include "MAX31790.h"
+#include "max31790.h"
 
 esp_err_t MAX31790::init()
 {
@@ -82,8 +82,7 @@ esp_err_t MAX31790::readFanConfig(const uint8_t& index, FANCONFIG* fanConfig)
         return rv;
 
     fanConfig->outputMode = static_cast<Output_Mode>(data & static_cast<uint8_t>(FanConfigMask::Output_Mode));
-    fanConfig->lockedRotorPolarity =
-        static_cast<Locked_Rotor_Polarity>(data & static_cast<uint8_t>(FanConfigMask::Locked_Rotor_Polarity));
+    fanConfig->lockedRotorPolarity = static_cast<Locked_Rotor_Polarity>(data & static_cast<uint8_t>(FanConfigMask::Locked_Rotor_Polarity));
     fanConfig->tachInputMode = static_cast<Tach_Input_Mode>(data & static_cast<uint8_t>(FanConfigMask::Tach_Input_Mode));
     fanConfig->tachInputEnable = static_cast<Tach_Input_Enable>(data & static_cast<uint8_t>(FanConfigMask::Tach_Input_Enable));
     fanConfig->controlMonitor = static_cast<Control_Monitor>(data & static_cast<uint8_t>(FanConfigMask::Control_Monitor));

@@ -1,4 +1,4 @@
-#include "FanControl.h"
+#include "pwm_control.h"
 
 esp_err_t FanControl::init()
 {
@@ -71,7 +71,6 @@ esp_err_t FanControl::init()
 
             default :
                 return ESP_ERR_INVALID_ARG;
-                break;
         }
 
         rv = _max31790->writeWindow(i, 0);

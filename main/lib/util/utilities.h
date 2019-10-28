@@ -19,7 +19,7 @@ inline auto  average_vector(std::vector<T> const& v) -> decltype(T() / 1.0)
     return std::accumulate(v.begin(), v.end(), 0LL) / v.size();
 }
 
-inline double average(double numbers[], int count )
+inline double average(const double numbers[], const int &count )
 {
   double sum = 0;
 
@@ -33,7 +33,7 @@ inline double average(double numbers[], int count )
 }
 
 template<typename T>
-T clamp(T Value, T Min, T Max)
+T clamp(const T &Value, const T &Min, const T &Max)
 {
     return (Value < Min)? Min : (Value > Max)? Max : Value;
 }

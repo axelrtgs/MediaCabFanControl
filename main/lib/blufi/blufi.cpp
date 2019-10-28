@@ -5,7 +5,7 @@ extern "C" {
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
 
 #include "esp_wifi.h"
 
@@ -45,19 +45,19 @@ namespace blufi
 
     //uint8_t test_manufacturer[TEST_MANUFACTURER_DATA_LEN] =  {0x12, 0x23, 0x45, 0x56};
     esp_ble_adv_data_t blufi_adv_data = {
-        .set_scan_rsp = false,
-        .include_name = true,
-        .include_txpower = true,
-        .min_interval = 0x0006, //slave connection min interval, Time = min_interval * 1.25 msec
-        .max_interval = 0x0010, //slave connection max interval, Time = max_interval * 1.25 msec
-        .appearance = 0x00,
-        .manufacturer_len = 0,
-        .p_manufacturer_data =  nullptr,
-        .service_data_len = 0,
-        .p_service_data = nullptr,
-        .service_uuid_len = 16,
-        .p_service_uuid = blufi_service_uuid128,
-        .flag = 0x6,
+        false,
+        true,
+        true,
+        0x0006,
+        0x0010,
+        0x00,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        16,
+        blufi_service_uuid128,
+        0x6,
     };
 
     esp_ble_adv_params_t blufi_adv_params = {
@@ -105,21 +105,23 @@ namespace blufi
         blufiSecurity = NULL;
     }
 
-    esp_err_t wifi_event_handler(void* ctx, system_event_t* event)
+void wifi_event_handler(void* arg, esp_event_base_t event_base,
+                                 int32_t event_id, void* event_data)
     {
         wifi_mode_t mode;
-        auto& callback = *reinterpret_cast<wificallback_t*>(ctx);
+        auto& callback = *reinterpret_cast<wificallback_t*>(arg);
 
-        switch (event->event_id) {
-            case SYSTEM_EVENT_STA_START:
+        switch (event_id) {
+            case WIFI_EVENT_STA_START:
                 BLUFI_INFO("%s STA Start\n", __func__);
                 esp_wifi_connect();
                 callback(WifiAssociationState::CONNECTING);
                 break;
-            case SYSTEM_EVENT_STA_GOT_IP: {
+            case IP_EVENT_STA_GOT_IP: {
                 esp_blufi_extra_info_t info;
+                ip_event_got_ip_t *event = (ip_event_got_ip_t*)event_data;
 
-                BLUFI_INFO("%s STA Got IP: %s\n", __func__, ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+                BLUFI_INFO("%s STA Got IP: %s\n", __func__, ip4addr_ntoa(&event->ip_info.ip));
                 xEventGroupSetBits(wifi_event_group, WIFI_GOT_IP_BIT);
                 esp_wifi_get_mode(&mode);
 
@@ -132,10 +134,11 @@ namespace blufi
                 callback(WifiAssociationState::CONNECTED);
                 break;
             }
-            case SYSTEM_EVENT_AP_STA_GOT_IP6: {
+            case IP_EVENT_GOT_IP6: {
                 esp_blufi_extra_info_t info;
+                ip_event_got_ip6_t *event  = (ip_event_got_ip6_t*)event_data;
 
-                BLUFI_INFO("%s STA Got IP6: %s\n", __func__, ip6addr_ntoa(&event->event_info.got_ip6.ip6_info.ip));
+                BLUFI_INFO("%s STA Got IP6: %s\n", __func__, ip6addr_ntoa(&event->ip6_info.ip));
                 xEventGroupSetBits(wifi_event_group, WIFI_GOT_IP6_BIT);
                 esp_wifi_get_mode(&mode);
 
@@ -148,15 +151,17 @@ namespace blufi
                 callback(WifiAssociationState::CONNECTED6);
                 break;
             }
-            case SYSTEM_EVENT_STA_CONNECTED:
+            case WIFI_EVENT_STA_CONNECTED: {
+                wifi_event_sta_connected_t* event = (wifi_event_sta_connected_t*) event_data;
                 gl_sta_connected = true;
                 BLUFI_INFO("%s STA Connected\n", __func__);
-                memcpy(gl_sta_bssid, event->event_info.connected.bssid, 6);
-                memcpy(gl_sta_ssid, event->event_info.connected.ssid, event->event_info.connected.ssid_len);
-                gl_sta_ssid_len = event->event_info.connected.ssid_len;
+                memcpy(gl_sta_bssid, event->bssid, 6);
+                memcpy(gl_sta_ssid, event->ssid, event->ssid_len);
+                gl_sta_ssid_len = event->ssid_len;
                 tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
                 break;
-            case SYSTEM_EVENT_STA_DISCONNECTED:
+            }
+            case WIFI_EVENT_STA_DISCONNECTED:
                 /* This is a workaround as ESP32 WiFi libs don't currently
                    auto-reassociate. */
                 BLUFI_INFO("%s STA Disconnected\n", __func__);
@@ -170,7 +175,7 @@ namespace blufi
                 xEventGroupClearBits(wifi_event_group, WIFI_GOT_IP6_BIT);
                 callback(WifiAssociationState::CONNECTING);
                 break;
-            case SYSTEM_EVENT_AP_START:
+            case WIFI_EVENT_AP_START:
                 esp_wifi_get_mode(&mode);
 
                 /* TODO: get config or information of softap, then set to report extra_info */
@@ -180,7 +185,7 @@ namespace blufi
                     esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_FAIL, 0, NULL);
                 }
                 break;
-            case SYSTEM_EVENT_SCAN_DONE: {
+            case WIFI_EVENT_SCAN_DONE: {
                 uint16_t apCount = 0;
                 esp_wifi_scan_get_ap_num(&apCount);
                 if (apCount == 0) {
@@ -214,7 +219,6 @@ namespace blufi
             default:
                 break;
         }
-        return ESP_OK;
     }
 
     void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param)
@@ -509,11 +513,11 @@ namespace blufi
     }
 
     esp_blufi_callbacks_t blufi_callbacks = {
-        .event_cb = blufi_event_callback,
-        .negotiate_data_handler = blufi_dh_negotiate_data_handler,
-        .encrypt_func = blufi_aes_encrypt,
-        .decrypt_func = blufi_aes_decrypt,
-        .checksum_func = blufi_crc_checksum,
+        blufi_event_callback,
+        blufi_dh_negotiate_data_handler,
+        blufi_aes_encrypt,
+        blufi_aes_decrypt,
+        blufi_crc_checksum,
     };
 
     void blufi::init()
@@ -525,9 +529,11 @@ namespace blufi
 
     tcpip_adapter_init();
     wifi_event_group = xEventGroupCreate();
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
     using namespace std::placeholders;
     mWifiCallback = std::bind(&blufi::wifiStateChanged, this, _1);
-    ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, &mWifiCallback));
+    ESP_ERROR_CHECK( esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, &mWifiCallback) );
+    ESP_ERROR_CHECK( esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, &mWifiCallback) );
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
