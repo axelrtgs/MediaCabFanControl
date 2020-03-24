@@ -1,5 +1,5 @@
 #include "blufi.h"
-#include <iomanip>
+#include <utility>
 
 extern "C" {
 #include <string.h>
@@ -27,6 +27,7 @@ namespace blufi
 
     /* store the station info for send back to phone */
     bool gl_sta_connected = false;
+    bool ble_is_connected = false;
     uint8_t gl_sta_bssid[6];
     uint8_t gl_sta_ssid[32];
     int gl_sta_ssid_len;
@@ -52,9 +53,9 @@ namespace blufi
         0x0010,
         0x00,
         0,
-        nullptr,
+        NULL,
         0,
-        nullptr,
+        NULL,
         16,
         blufi_service_uuid128,
         0x6,
@@ -121,7 +122,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 esp_blufi_extra_info_t info;
                 ip_event_got_ip_t *event = (ip_event_got_ip_t*)event_data;
 
-                BLUFI_INFO("%s STA Got IP: %s\n", __func__, ip4addr_ntoa(&event->ip_info.ip));
+                BLUFI_INFO("%s STA Got IP: " IPSTR "\n", __func__, IP2STR(&event->ip_info.ip));
                 xEventGroupSetBits(wifi_event_group, WIFI_GOT_IP_BIT);
                 esp_wifi_get_mode(&mode);
 
@@ -130,15 +131,19 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 info.sta_bssid_set = true;
                 info.sta_ssid = gl_sta_ssid;
                 info.sta_ssid_len = gl_sta_ssid_len;
-                esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, &info);
-                callback(WifiAssociationState::CONNECTED);
+                if (ble_is_connected == true) {
+                  esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, &info);
+                  callback(WifiAssociationState::CONNECTED);
+                } else {
+                    BLUFI_INFO("BLUFI BLE is not connected yet\n");
+                }
                 break;
             }
             case IP_EVENT_GOT_IP6: {
                 esp_blufi_extra_info_t info;
                 ip_event_got_ip6_t *event  = (ip_event_got_ip6_t*)event_data;
 
-                BLUFI_INFO("%s STA Got IP6: %s\n", __func__, ip6addr_ntoa(&event->ip6_info.ip));
+                BLUFI_INFO("%s STA Got IP6: " IPV6STR "\n", __func__, IPV62STR(event->ip6_info.ip));
                 xEventGroupSetBits(wifi_event_group, WIFI_GOT_IP6_BIT);
                 esp_wifi_get_mode(&mode);
 
@@ -147,8 +152,12 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 info.sta_bssid_set = true;
                 info.sta_ssid = gl_sta_ssid;
                 info.sta_ssid_len = gl_sta_ssid_len;
-                esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, &info);
-                callback(WifiAssociationState::CONNECTED6);
+                if (ble_is_connected == true) {
+                  esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, &info);
+                  callback(WifiAssociationState::CONNECTED6);
+                } else {
+                    BLUFI_INFO("BLUFI BLE is not connected yet\n");
+                }
                 break;
             }
             case WIFI_EVENT_STA_CONNECTED: {
@@ -179,10 +188,14 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 esp_wifi_get_mode(&mode);
 
                 /* TODO: get config or information of softap, then set to report extra_info */
-                if (gl_sta_connected) {
-                    esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, NULL);
+                if (ble_is_connected == true) {
+                  if (gl_sta_connected) {
+                      esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, NULL);
+                  } else {
+                      esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_FAIL, 0, NULL);
+                  }
                 } else {
-                    esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_FAIL, 0, NULL);
+                    BLUFI_INFO("BLUFI BLE is not connected yet\n");
                 }
                 break;
             case WIFI_EVENT_SCAN_DONE: {
@@ -210,7 +223,13 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                     blufi_ap_list[i].rssi = ap_list[i].rssi;
                     memcpy(blufi_ap_list[i].ssid, ap_list[i].ssid, sizeof(ap_list[i].ssid));
                 }
-                esp_blufi_send_wifi_list(apCount, blufi_ap_list);
+
+                if (ble_is_connected == true) {
+                    esp_blufi_send_wifi_list(apCount, blufi_ap_list);
+                } else {
+                    BLUFI_INFO("BLUFI BLE is not connected yet\n");
+                }
+
                 esp_wifi_scan_stop();
                 free(ap_list);
                 free(blufi_ap_list);
@@ -219,6 +238,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
             default:
                 break;
         }
+        return;
     }
 
     void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param)
@@ -247,6 +267,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 break;
             case ESP_BLUFI_EVENT_BLE_CONNECT:
                 BLUFI_INFO("%s BLUFI ble connect\n", __func__);
+                ble_is_connected = true;
                 server_if = param->connect.server_if;
                 conn_id = param->connect.conn_id;
                 esp_ble_gap_stop_advertising();
@@ -254,6 +275,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 break;
             case ESP_BLUFI_EVENT_BLE_DISCONNECT:
                 BLUFI_INFO("%s BLUFI ble disconnect\n", __func__);
+                ble_is_connected = false;
                 blufi_security_deinit();
                 esp_ble_gap_start_advertising(&blufi_adv_params);
                 break;
@@ -367,7 +389,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
             }
             case ESP_BLUFI_EVENT_RECV_CUSTOM_DATA:
                 BLUFI_INFO("%s Recv Custom Data %d\n", __func__, param->custom_data.data_len);
-                        esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
+                esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
                 break;
             case ESP_BLUFI_EVENT_RECV_USERNAME:
                 /* Not handle currently */
@@ -449,20 +471,20 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                         blufiSecurity->share_key,
                                         SHARE_KEY_BIT_LEN,
                                         &blufiSecurity->share_len,
-                                        myrand,
+                                        NULL,
                                         NULL);
 
                 mbedtls_md5(blufiSecurity->share_key, blufiSecurity->share_len, blufiSecurity->psk);
 
                 mbedtls_aes_setkey_enc(&blufiSecurity->aes, blufiSecurity->psk, 128);
-                mbedtls_aes_setkey_dec(&blufiSecurity->aes, blufiSecurity->psk, 128);
 
                 /* alloc output data */
                 *output_data = &blufiSecurity->self_public_key[0];
                 *output_len = blufiSecurity->dhm.len;
                 *need_free = false;
-                break;
+
             }
+                break;
             case SEC_TYPE_DH_P:
                 break;
             case SEC_TYPE_DH_G:
@@ -509,7 +531,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
     uint16_t blufi_crc_checksum(uint8_t iv8, uint8_t* data, int len)
     {
         /* This iv8 ignore, not used */
-        return crc16_be(0, data, len);
+        return esp_crc16_be(0, data, len);
     }
 
     esp_blufi_callbacks_t blufi_callbacks = {
@@ -527,7 +549,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
     wifi_config_t sta_stored_config;
     bool sta_config_valid = true;
 
-    tcpip_adapter_init();
+    ESP_ERROR_CHECK(esp_netif_init());
     wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     using namespace std::placeholders;

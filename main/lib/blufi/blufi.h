@@ -11,7 +11,7 @@
 #include "mbedtls/aes.h"
 #include "mbedtls/dhm.h"
 #include "mbedtls/md5.h"
-#include "esp32/rom/crc.h"
+#include "esp_crc.h"
 
 #define BLUFI_DEVICE_NAME "BLUFI_DEVICE"
 
