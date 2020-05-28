@@ -471,12 +471,13 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                         blufiSecurity->share_key,
                                         SHARE_KEY_BIT_LEN,
                                         &blufiSecurity->share_len,
-                                        NULL,
+                                        myrand,
                                         NULL);
 
                 mbedtls_md5(blufiSecurity->share_key, blufiSecurity->share_len, blufiSecurity->psk);
 
                 mbedtls_aes_setkey_enc(&blufiSecurity->aes, blufiSecurity->psk, 128);
+                mbedtls_aes_setkey_dec(&blufiSecurity->aes, blufiSecurity->psk, 128);
 
                 /* alloc output data */
                 *output_data = &blufiSecurity->self_public_key[0];
