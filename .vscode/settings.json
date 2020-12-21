@@ -73,6 +73,21 @@
     "vector": "cpp",
     "*.tcc": "cpp",
     "memory_resource": "cpp",
-    "cinttypes": "cpp"
+    "cinttypes": "cpp",
+    "*.ipp": "cpp",
+    "*.inc": "cpp",
+    "__tree": "cpp",
+    "compare": "cpp",
+    "csignal": "cpp",
+    "coroutine": "cpp",
+    "future": "cpp",
+    "iostream": "cpp",
+    "map": "cpp",
+    "set": "cpp",
+    "strstream": "cpp",
+    "concepts": "cpp",
+    "netfwd": "cpp",
+    "ranges": "cpp",
+    "stop_token": "cpp"
   }
 }

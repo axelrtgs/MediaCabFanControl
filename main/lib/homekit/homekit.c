@@ -112,20 +112,12 @@ bool temperature_init() {
     bool device_found = false;
     owb_search_first(OWB, &search_state, &device_found);
     if (device_found) {
-
-        // For a single device only:
-        OneWireBus_ROMCode rom_code;
-        owb_status status = owb_read_rom(OWB, &rom_code);
-        if (status == OWB_STATUS_OK) {
-            char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
-            owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
-            printf("Found DS18B20 device ROM code: %s\n", rom_code_s);
-        } else {
-            printf("An error occurred reading ROM code: %d", status);
-        }
+        char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
+        owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
+        printf("Found DS18B20 device ROM code: %s\n", rom_code_s);
 
         DS18B20_INFO = ds18b20_malloc();
-        ds18b20_init_solo(DS18B20_INFO, OWB);
+        ds18b20_init(DS18B20_INFO, OWB, search_state.rom_code);
         ds18b20_use_crc(DS18B20_INFO, true);
         ds18b20_set_resolution(DS18B20_INFO, TEMPERATURE_RESOLUTION);
     }
@@ -176,7 +168,6 @@ void temperature_sensor_task(void *_args) {
         } else {
             printf("Couldnt read data from sensor\n");
         }
-
         vTaskDelay(TEMPERATURE_POLL_PERIOD / portTICK_PERIOD_MS);
     }
 }

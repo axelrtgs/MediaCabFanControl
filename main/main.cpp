@@ -4,7 +4,7 @@
 #include "pwm_control.h"
 #include "pid_enhanced.h"
 
-#include "blufi.h"
+#include "wifi_prov_mgr.h"
 
 extern "C"
 {
@@ -26,13 +26,13 @@ namespace
     const uint32_t TEMPERATURE_POLL_PERIOD = 5000;
 }
 
-std::shared_ptr<blufi::blufi> mblufi(new blufi::blufi());
+std::shared_ptr<wifi_prov_mgr::wifi_prov_mgr> mwifi(new wifi_prov_mgr::wifi_prov_mgr());
 bool connected = false;
 fan_kit fanKit;
 
 extern "C" {
     void setupApp();
-    void blufi_callback(blufi::WifiConnectionState state);
+    void wifi_callback(wifi_prov_mgr::WifiConnectionState state);
 
     void app_main()
     {
@@ -62,8 +62,8 @@ extern "C" {
         }
         ESP_ERROR_CHECK(ret);
 
-        mblufi->init();
-        mblufi->registerCallback(blufi_callback);
+        mwifi->registerCallback(wifi_callback);
+        mwifi->init();
     }
 
     void valuesTask(void *_args)
@@ -118,15 +118,16 @@ extern "C" {
         }
     }
 
-    void blufi_callback(blufi::WifiConnectionState state)
+    void wifi_callback(wifi_prov_mgr::WifiConnectionState state)
     {
-        if (state.wifiState == blufi::WifiAssociationState::CONNECTED && !connected) {
+        printf("Callback: %d\n", (int)state.wifiState);
+        if (state.wifiState == wifi_prov_mgr::WifiAssociationState::CONNECTED && !connected) {
             printf("Wifi connected Starting homekit\n");
             homekit_init(&fanKit);
             connected = true;
             //setupApp();
             xTaskCreate(valuesTask, "Values", 2048, NULL, 2, NULL);
-        } else if (state.wifiState == blufi::WifiAssociationState::DISCONNECTED && connected) {
+        } else if (state.wifiState == wifi_prov_mgr::WifiAssociationState::DISCONNECTED && connected) {
             printf("Wifi disconnected\n");
             connected = false;
         }
