@@ -7,52 +7,46 @@ template <typename... Args>
 class Dispatcher
 {
 public:
-    using CBType = std::function<void(Args...)>;
+  using CBType = std::function<void(Args...)>;
 
-    class CBID
+  class CBID
+  {
+  public:
+    CBID() : valid(false) {}
+
+  private:
+    friend class Dispatcher<Args...>;
+    CBID(typename std::list<CBType>::iterator i)
+        : iter(i), valid(true)
     {
-    public:
-        CBID() : valid(false) {}
-
-    private:
-        friend class Dispatcher<Args...>;
-        CBID(typename std::list<CBType>::iterator i)
-            : iter(i), valid(true)
-        {
-        }
-
-        typename std::list<CBType>::iterator iter;
-        bool valid;
-    };
-
-    // register to be notified
-    CBID addCB(CBType cb)
-    {
-        if (cb)
-        {
-            cbs.push_back(cb);
-            return CBID(--cbs.end());
-        }
-        return CBID();
     }
 
-    // unregister to be notified
+    typename std::list<CBType>::iterator iter;
+    bool valid;
+  };
+
+    CBID addCB(CBType cb)
+    {
+      if (cb)
+      {
+        cbs.push_back(cb);
+        return CBID(--cbs.end());
+      }
+      return CBID();
+    }
+
     void delCB(CBID &id)
     {
-        if (id.valid)
-        {
-            cbs.erase(id.iter);
-        }
+      if (id.valid)
+        cbs.erase(id.iter);
     }
 
     void broadcast(Args... args)
     {
-        for (auto &cb : cbs)
-        {
-            cb(args...);
-        }
+      for (auto &cb : cbs)
+        cb(args...);
     }
 
-private:
+  private:
     std::list<CBType> cbs;
 };

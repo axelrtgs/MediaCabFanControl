@@ -1,7 +1,6 @@
 #pragma once
 
 #include <pid.h>
-#include "utilities.h"
 
 #ifndef PIDEnhanced_h
 #define PIDEnhanced_h
@@ -25,27 +24,6 @@ class PIDEnhanced
       _PID = new PID(&_input, &_target, &_output, minDuty, maxDuty, _conservative.Kp, _conservative.Ki, _conservative.Kd, P_ON_E, REVERSE);
       _PID->setBangBang(bang_on, bang_off);
       _PID->setTimeStep(5000);
-    }
-
-    inline std::string computeAverage(const double temperature[], const int &count, const double &target, double* output)
-    {
-        double input = average(temperature, count);
-
-        return compute(input, target, output);
-    }
-
-    inline std::string computeAvgOfList(const std::initializer_list<double> &temperature, const double &target, double* output)
-    {
-        double input = average_list(temperature);
-
-        return compute(input, target, output);
-    }
-
-    inline std::string computeAvgOfVector(const std::vector<double> &temperature, const double &target, double* output)
-    {
-      double input = average_vector(temperature);
-
-      return compute(input, target, output);
     }
 
     inline std::string compute(const double &input, const double &target, double* output)

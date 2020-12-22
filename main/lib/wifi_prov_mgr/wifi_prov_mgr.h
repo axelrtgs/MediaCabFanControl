@@ -40,19 +40,19 @@ namespace wifi_prov_mgr
   using WifiConnectionStateCB = std::function<void(wifi_prov_mgr::WifiConnectionState)>;
   class wifi_prov_mgr
   {
-    public:
-      wifi_prov_mgr() = default;
-      void init(const char *pop);
-      void registerCallback(WifiConnectionStateCB callback);
+  public:
+    wifi_prov_mgr() = default;
+    void init(const char *pop);
+    void registerCallback(WifiConnectionStateCB callback);
 
-      std::string getIpAddrStr() const;
-      WifiConnectionState getWifiState();
+    std::string getIpAddrStr() const;
+    WifiConnectionState getWifiState();
 
 
-    private:
-      void wifiStateChanged(WifiAssociationState state);
+  private:
+    void wifiStateChanged(WifiAssociationState state);
 
-      Dispatcher<WifiConnectionState> mWifiStateNotifier;
-      wificallback_t mWifiCallback; // Need to store so doesnt go out of scope in C land
+    Dispatcher<WifiConnectionState> mWifiStateNotifier;
+    wificallback_t mWifiCallback; // Need to store so doesnt go out of scope in C land
   };
 }
