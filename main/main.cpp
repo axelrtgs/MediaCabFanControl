@@ -29,7 +29,8 @@ namespace
 }
 
 std::shared_ptr<wifi_prov_mgr::wifi_prov_mgr> mwifi(new wifi_prov_mgr::wifi_prov_mgr());
-std::shared_ptr<temperature::temperature> mtemp(new temperature::temperature());
+std::shared_ptr<temperature::temperature> mtempA(new temperature::temperature());
+std::shared_ptr<temperature::temperature> mtempB(new temperature::temperature());
 
 bool connected = false;
 // fan_kit fanKit;
@@ -110,17 +111,19 @@ extern "C" {
     _PID = new PIDEnhanced(tolerance, bang_on, bang_off, PWM_MIN, PWM_MAX, conservative_tune, aggressive_tune);
     while(1)
     {
-      auto average_temperature = mtemp->average_temperature();
+      auto average_temperatureA = mtempA->average_temperature();
+      auto average_temperatureB = mtempB->average_temperature();
+      printf("TemperatureA: %f \n", average_temperatureA);
+      printf("TemperatureB: %f \n", average_temperatureB);
 
       // printf("Mode: %d CurTemp: %f, TargTemp: %f\n", fanKit.mode, fanKit.cur_temp, fanKit.target_temp);
       // std::string PID_Profile = _PID->computeAvgOfVector(inputVector, fanKit.target_temp, &_PID_output);
-      printf("Temperature: %f \n", average_temperature);
 
-      std::string PID_Profile = _PID->compute(average_temperature, 15.0, &_PID_output);
+      // std::string PID_Profile = _PID->compute(average_temperature, 15.0, &_PID_output);
 
-      printf("PID Profile: %s \n", PID_Profile.c_str());
+      // printf("PID Profile: %s \n", PID_Profile.c_str());
 
-      printf("PID Out: %f \n", _PID_output);
+      // printf("PID Out: %f \n", _PID_output);
       vTaskDelay(TEMPERATURE_POLL_PERIOD / portTICK_PERIOD_MS);
     }
   }
@@ -130,7 +133,8 @@ extern "C" {
     printf("Callback: %d\n", (int)state.wifiState);
     if (state.wifiState == wifi_prov_mgr::WifiAssociationState::CONNECTED && !connected) {
       printf("Wifi connected Starting homekit\n");
-      mtemp->init(4);
+      mtempA->init(4, 0);
+      mtempB->init(5, 1);
       // homekit_init(&fanKit);
       connected = true;
       //setupApp();

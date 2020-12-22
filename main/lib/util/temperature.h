@@ -30,7 +30,7 @@ namespace temperature
   public:
     temperature() = default;
 
-    void init(uint8_t gpio_pin)
+    void init(uint8_t gpio_pin, uint8_t instance_id)
     {
       // Stable readings require a brief period before communication
       vTaskDelay(2000.0 / portTICK_PERIOD_MS);
@@ -38,7 +38,10 @@ namespace temperature
       gpio_num_t gpio_num = static_cast<gpio_num_t>(gpio_pin);
       ESP_LOGD(TAG, "Find temperature devices on OneWire bus gpio #: %d:", gpio_num);
 
-      owb = owb_rmt_initialize(&rmt_driver_info, gpio_num, RMT_CHANNEL_1, RMT_CHANNEL_0);
+      rmt_channel_t tx_channel = static_cast<rmt_channel_t>(RMT_CHANNEL_0 + instance_id * 2);
+      rmt_channel_t rx_channel = static_cast<rmt_channel_t>(RMT_CHANNEL_1 + instance_id * 2);
+
+      owb = owb_rmt_initialize(&rmt_driver_info, gpio_num, tx_channel, rx_channel);
       owb_use_crc(owb, true);
 
       std::vector<OneWireBus_ROMCode> device_rom_codes;
@@ -105,7 +108,11 @@ namespace temperature
         for(const auto& reading: readings)
         {
           if (reading.error != DS18B20_OK)
+          {
             ESP_LOGE(TAG, "Couldn't read data from temperature sensor");
+            std::vector<temperature_reading> empty;
+            return empty;
+          }
           else
             ESP_LOGD(TAG, "Temperature sensor reading (degrees C): %.1f", reading.value);
         }
