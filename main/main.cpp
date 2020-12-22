@@ -16,7 +16,8 @@ extern "C"
     #include "esp_task_wdt.h"
     #include "nvs_flash.h"
 
-    #include "homekit.h"
+    // #include "homekit.h"
+    #include "temperature.h"
 }
 
 namespace
@@ -27,8 +28,9 @@ namespace
 }
 
 std::shared_ptr<wifi_prov_mgr::wifi_prov_mgr> mwifi(new wifi_prov_mgr::wifi_prov_mgr());
+std::shared_ptr<temperature::temperature> mtemp(new temperature::temperature());
 bool connected = false;
-fan_kit fanKit;
+// fan_kit fanKit;
 
 extern "C" {
     void setupApp();
@@ -106,10 +108,13 @@ extern "C" {
         _PID = new PIDEnhanced(tolerance, bang_on, bang_off, PWM_MIN, PWM_MAX, conservative_tune, aggressive_tune);
         while(1)
         {
+      auto average_temperature = mtemp->average_temperature();
 
-            std::vector<double> inputVector = {fanKit.cur_temp};
-            printf("Mode: %d CurTemp: %f, TargTemp: %f\n", fanKit.mode, fanKit.cur_temp, fanKit.target_temp);
-            std::string PID_Profile = _PID->computeAvgOfVector(inputVector, fanKit.target_temp, &_PID_output);
+      // printf("Mode: %d CurTemp: %f, TargTemp: %f\n", fanKit.mode, fanKit.cur_temp, fanKit.target_temp);
+      // std::string PID_Profile = _PID->computeAvgOfVector(inputVector, fanKit.target_temp, &_PID_output);
+      printf("Temperature: %f \n", average_temperature);
+
+      std::string PID_Profile = _PID->compute(average_temperature, 15.0, &_PID_output);
 
             printf("PID Profile: %s \n", PID_Profile.c_str());
 
@@ -123,10 +128,11 @@ extern "C" {
         printf("Callback: %d\n", (int)state.wifiState);
         if (state.wifiState == wifi_prov_mgr::WifiAssociationState::CONNECTED && !connected) {
             printf("Wifi connected Starting homekit\n");
-            homekit_init(&fanKit);
+      mtemp->init(4);
+      // homekit_init(&fanKit);
             connected = true;
             //setupApp();
-            xTaskCreate(valuesTask, "Values", 2048, NULL, 2, NULL);
+      xTaskCreate(valuesTask, "Values", 2560, NULL, 2, NULL);
         } else if (state.wifiState == wifi_prov_mgr::WifiAssociationState::DISCONNECTED && connected) {
             printf("Wifi disconnected\n");
             connected = false;

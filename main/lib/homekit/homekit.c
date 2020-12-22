@@ -10,9 +10,7 @@
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
-#include "owb.h"
-#include "owb_rmt.h"
-#include "ds18b20.h"
+
 
 void on_update(homekit_characteristic_t *ch, homekit_value_t value, void *context);
 
@@ -28,14 +26,6 @@ homekit_server_config_t config;
 homekit_service_t* services[10 + 1];
 homekit_service_t** s = services;
 homekit_accessory_t *accessories[10];
-
-const uint32_t TEMPERATURE_POLL_PERIOD = 5000;
-const uint8_t TEMPERATURE_GPIO = 5;
-const DS18B20_RESOLUTION TEMPERATURE_RESOLUTION= DS18B20_RESOLUTION_12_BIT;
-
-OneWireBus * OWB;
-owb_rmt_driver_info RMT_DRIVER_INFO;
-DS18B20_Info* DS18B20_INFO;
 
 const uint8_t led_gpio = 2;
 const bool led_on = false;
@@ -102,32 +92,6 @@ void led_init() {
     led_write(led_on);
 }
 
-bool temperature_init() {
-    OWB = owb_rmt_initialize(&RMT_DRIVER_INFO, TEMPERATURE_GPIO, RMT_CHANNEL_1, RMT_CHANNEL_0);
-    owb_use_crc(OWB, true);  // enable CRC check for ROM code
-
-    // Find all connected devices
-    printf("Search for devices:\n");
-    OneWireBus_SearchState search_state;
-    bool device_found = false;
-    owb_search_first(OWB, &search_state, &device_found);
-    if (device_found) {
-        char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
-        owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
-        printf("Found DS18B20 device ROM code: %s\n", rom_code_s);
-
-        DS18B20_INFO = ds18b20_malloc();
-        ds18b20_init(DS18B20_INFO, OWB, search_state.rom_code);
-        ds18b20_use_crc(DS18B20_INFO, true);
-        ds18b20_set_resolution(DS18B20_INFO, TEMPERATURE_RESOLUTION);
-    }
-    else
-    {
-        printf("An error occurred initializing the temperature sensor");
-    }
-    return device_found;
-}
-
 void thermostat_identify_task(void *_args) {
     for (int i=0; i<3; i++) {
         for (int j=0; j<2; j++) {
@@ -149,16 +113,10 @@ void thermostat_identify(homekit_value_t _value) {
 }
 
 void temperature_sensor_task(void *_args) {
-    //fanOff();
-    //heaterOff();
-    //coolerOff();
-
     float temperature_value;
     while (1) {
-        ds18b20_convert_all(OWB);
-        ds18b20_wait_for_conversion(DS18B20_INFO);
-        DS18B20_ERROR error = ds18b20_read_temp(DS18B20_INFO, &temperature_value);
-        if (error == DS18B20_OK) {
+        int8_t error = ds18b20_read_temp(&temperature_value);
+        if (error == 0) {
             printf("Got readings: temperature %g\n", temperature_value);
             current_temperature.value = HOMEKIT_FLOAT(temperature_value);
 

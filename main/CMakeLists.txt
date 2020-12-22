@@ -4,7 +4,7 @@ set(COMPONENT_SRCS
         "lib/pwm_control/pwm_control.cpp"
         "lib/pid/pid.cpp"
         "lib/wifi_prov_mgr/wifi_prov_mgr.cpp"
-        "lib/homekit/homekit.c"
+        # "lib/homekit/homekit.c"
         )
 
 set(COMPONENT_ADD_INCLUDEDIRS
@@ -12,7 +12,7 @@ set(COMPONENT_ADD_INCLUDEDIRS
         "lib/pwm_control"
         "lib/pid"
         "lib/wifi_prov_mgr"
-        "lib/homekit"
+        # "lib/homekit"
         "lib/util"
         )
 
