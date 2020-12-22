@@ -70,7 +70,7 @@ namespace wifi_prov_mgr
               ssid_prefix, eth_mac[3], eth_mac[4], eth_mac[5]);
   }
 
-  void wifi_prov_mgr::init()
+  void wifi_prov_mgr::init(const char *pop)
   {
       ESP_ERROR_CHECK(esp_netif_init());
       ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -115,12 +115,6 @@ namespace wifi_prov_mgr
           *          for encryption/decryption of messages.
           */
           wifi_prov_security_t security = WIFI_PROV_SECURITY_1;
-
-          /* Do we want a proof-of-possession (ignored if Security 0 is selected):
-          *      - this should be a string with length > 0
-          *      - NULL if not used
-          */
-          const char *pop = "abcd1234";
 
           /* What is the service key (could be NULL)
           * This translates to :

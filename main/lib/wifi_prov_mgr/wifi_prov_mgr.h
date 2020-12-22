@@ -25,31 +25,31 @@ namespace wifi_prov_mgr
 {
   enum class WifiAssociationState: int
   {
-      CONNECTED = 0,
-      DISCONNECTED = 1,
-      CONNECTING = 2
+    CONNECTED = 0,
+    DISCONNECTED = 1,
+    CONNECTING = 2
   };
 
   struct WifiConnectionState
   {
-      WifiAssociationState wifiState = WifiAssociationState::DISCONNECTED;
-      std::string ipAddr = "N/A";
+    WifiAssociationState wifiState = WifiAssociationState::DISCONNECTED;
+    std::string ipAddr = "N/A";
   };
 
   using wificallback_t = std::function<void(wifi_prov_mgr::WifiAssociationState)>;
   using WifiConnectionStateCB = std::function<void(wifi_prov_mgr::WifiConnectionState)>;
   class wifi_prov_mgr
   {
-  public:
+    public:
       wifi_prov_mgr() = default;
-      void init();
+      void init(const char *pop);
       void registerCallback(WifiConnectionStateCB callback);
 
       std::string getIpAddrStr() const;
       WifiConnectionState getWifiState();
 
 
-  private:
+    private:
       void wifiStateChanged(WifiAssociationState state);
 
       Dispatcher<WifiConnectionState> mWifiStateNotifier;
