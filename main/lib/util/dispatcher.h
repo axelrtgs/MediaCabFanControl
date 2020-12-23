@@ -1,52 +1,45 @@
 #pragma once
 
+#ifndef Dispatcher_h
+#define Dispatcher_h
+
 #include <functional>
 #include <list>
 
 template <typename... Args>
-class Dispatcher
-{
-public:
+class Dispatcher {
+ public:
   using CBType = std::function<void(Args...)>;
 
-  class CBID
-  {
-  public:
+  class CBID {
+   public:
     CBID() : valid(false) {}
 
-  private:
+   private:
     friend class Dispatcher<Args...>;
-    CBID(typename std::list<CBType>::iterator i)
-        : iter(i), valid(true)
-    {
-    }
+    CBID(typename std::list<CBType>::iterator i) : iter(i), valid(true) {}
 
     typename std::list<CBType>::iterator iter;
     bool valid;
   };
 
-    CBID addCB(CBType cb)
-    {
-      if (cb)
-      {
-        cbs.push_back(cb);
-        return CBID(--cbs.end());
-      }
-      return CBID();
+  CBID addCB(CBType cb) {
+    if (cb) {
+      cbs.push_back(cb);
+      return CBID(--cbs.end());
     }
+    return CBID();
+  }
 
-    void delCB(CBID &id)
-    {
-      if (id.valid)
-        cbs.erase(id.iter);
-    }
+  void delCB(CBID &id) {
+    if (id.valid) cbs.erase(id.iter);
+  }
 
-    void broadcast(Args... args)
-    {
-      for (auto &cb : cbs)
-        cb(args...);
-    }
+  void broadcast(Args... args) {
+    for (auto &cb : cbs) cb(args...);
+  }
 
-  private:
-    std::list<CBType> cbs;
+ private:
+  std::list<CBType> cbs;
 };
+#endif

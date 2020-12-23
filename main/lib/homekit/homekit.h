@@ -1,8 +1,12 @@
 #pragma once
+
+#ifndef homekit_h
+#define homekit_h
+
 enum target_state_value {
   OFF = 0,
   HEAT = 1,
-  COOL= 2,
+  COOL = 2,
   AUTO = 3,
 };
 
@@ -15,3 +19,4 @@ typedef struct {
 fan_kit* extern_values;
 
 void homekit_init(fan_kit* fanKit);
+#endif
