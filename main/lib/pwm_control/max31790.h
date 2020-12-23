@@ -24,6 +24,7 @@ const uint8_t PWM_SHIFT_BITS = 7;
 // Based off of datasheet @
 // https://datasheets.maximintegrated.com/en/ds/MAX31790.pdf
 
+namespace PWMControl {
 class MAX31790 {
  public:
   enum class Register : const uint8_t {
@@ -156,14 +157,14 @@ class MAX31790 {
 
   enum class Run_Standby : uint8_t { Run = 0b0 << 7, Standby = 0b1 << 7 };
 
-  struct CONFIG {
+  typedef struct CONFIG {
     Watch_Dog_Status watchDogStatus;
     Watch_Dog_Period watchDogPeriod;
     Oscillator_Select oscillatorSelect;
     Bus_Timeout busTimeout;
     Reset reset;
     Run_Standby runStandby;
-  };
+  } CONFIG;
 
   enum class PWM_FreqMask : const uint8_t {
     PWM1_3 = 0b1111 << 0,
@@ -185,10 +186,10 @@ class MAX31790 {
     kHz_25 = 0b1011
   };
 
-  struct PWMFREQ {
+  typedef struct PWMFREQ {
     PWMFreq PWM1_3;
     PWMFreq PWM4_6;
-  };
+  } PWMFREQ;
 
   enum class FanConfigMask : const uint8_t {
     Output_Mode = 0b1 << 0,
@@ -234,7 +235,7 @@ class MAX31790 {
 
   enum class Mode : const uint8_t { PWM = 0b0 << 7, RPM = 0b1 << 7 };
 
-  struct FANCONFIG {
+  typedef struct FANCONFIG {
     Output_Mode outputMode;
     Locked_Rotor_Polarity lockedRotorPolarity;
     Tach_Input_Mode tachInputMode;
@@ -242,7 +243,7 @@ class MAX31790 {
     Control_Monitor controlMonitor;
     Spin_Up spinUp;
     Mode mode;
-  };
+  } FANCONFIG;
 
   enum class FanDynamicsMask : const uint8_t {
     // Bit 0 Reserved
@@ -280,11 +281,11 @@ class MAX31790 {
     SR_32_3 = 0b111 << 5
   };
 
-  struct FANDYNAMICS {
+  typedef struct FANDYNAMICS {
     Asym_ROC asymROC;
     PWM_ROC pwmROC;
     Speed_Range speedRange;
-  };
+  } FANDYNAMICS;
 
   enum class FanFaultMask : const uint16_t {
     Fan1 = 0b1 << 0,
@@ -339,11 +340,11 @@ class MAX31790 {
     Sec_4_3 = 0b111 << 5
   };
 
-  struct FANOPTIONS {
+  typedef struct FANOPTIONS {
     Fan_Fault_Queue fanFaultQueue;
     Fan_Fail_Options fanFailOptions;
     Seq_Start_Delay seqStartDelay;
-  };
+  } FANOPTIONS;
 
   MAX31790(I2C_t* i2c, const uint8_t& deviceAddress) {
     _i2c = i2c;
@@ -436,4 +437,5 @@ class MAX31790 {
       return Speed_Range::SR_32_1;
   }
 };
+}  // namespace PWMControl
 #endif

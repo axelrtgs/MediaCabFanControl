@@ -1,6 +1,5 @@
 #include "wifi_prov_mgr.h"
 
-#include <esp_event.h>
 #include <esp_log.h>
 #include <esp_wifi.h>
 #include <freertos/FreeRTOS.h>
@@ -159,7 +158,7 @@ std::string wifi_prov_mgr::getIpAddrStr() const {
 
 void wifi_prov_mgr::wifiStateChanged(WifiAssociationState state) {
   ESP_LOGD(TAG, "wifiStateChanged: %d", (int)state);
-  WifiConnectionState wifiConnState;
+  WifiConnectionState_t wifiConnState;
   if (state == WifiAssociationState::CONNECTED) {
     wifiConnState.ipAddr = getIpAddrStr();
   }

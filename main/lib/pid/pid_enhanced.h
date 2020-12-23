@@ -5,24 +5,28 @@
 
 #include <pid.h>
 
+#include <string>
+
+namespace PID {
+typedef struct tuning {
+  double Kp;
+  double Ki;
+  double Kd;
+} tuning_t;
+
 class PIDEnhanced {
  public:
-  struct PID_TUNING {
-    double Kp;
-    double Ki;
-    double Kd;
-  };
-
-  PIDEnhanced(const int &tolerance, const int &bang_on, const int &bang_off,
-              const int &minDuty, const int &maxDuty,
-              const PID_TUNING &conservative, const PID_TUNING &aggressive) {
+  PIDEnhanced(const double &tolerance, const double &bang_on,
+              const double &bang_off, const double &minDuty,
+              const double &maxDuty, const tuning_t &conservative,
+              const tuning_t &aggressive) {
     _tolerance = tolerance;
     _conservative = conservative;
     _aggressive = aggressive;
 
-    _PID =
-        new PID(&_input, &_target, &_output, minDuty, maxDuty, _conservative.Kp,
-                _conservative.Ki, _conservative.Kd, P_ON_E, REVERSE);
+    _PID = new PID(&_input, &_target, &_output, minDuty, maxDuty,
+                   _conservative.Kp, _conservative.Ki, _conservative.Kd,
+                   PROPORTIONAL::ON_ERROR, DIRECTION::REVERSE);
     _PID->setBangBang(bang_on, bang_off);
     _PID->setTimeStep(5000);
   }
@@ -42,9 +46,9 @@ class PIDEnhanced {
   }
 
  private:
-  PID_TUNING _conservative;
-  PID_TUNING _aggressive;
-  int _tolerance;
+  tuning_t _conservative;
+  tuning_t _aggressive;
+  double _tolerance;
   PID *_PID;
   std::string _tuningProfile;
   double _input;
@@ -65,4 +69,5 @@ class PIDEnhanced {
     }
   }
 };
+}  // namespace PID
 #endif

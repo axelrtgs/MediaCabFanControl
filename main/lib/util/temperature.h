@@ -7,8 +7,10 @@
 #include <esp_log.h>
 
 #include <cmath>
+#include <vector>
 
 #include "ds18b20.h"
+#include "freertos/task.h"
 #include "owb.h"
 #include "owb_rmt.h"
 
@@ -20,27 +22,32 @@ const DS18B20_RESOLUTION TEMPERATURE_RESOLUTION = DS18B20_RESOLUTION_12_BIT;
 namespace temperature {
 static const char* TAG = "temperature";
 
-struct temperature_reading {
+typedef struct temperature_reading {
   float value = 0;
   DS18B20_ERROR error = DS18B20_OK;
-};
+} temperature_reading_t;
+
+typedef struct config {
+  uint8_t gpio_pin;
+  uint8_t instance_id;
+} config_t;
 
 class temperature {
  public:
   temperature() = default;
 
-  void init(uint8_t gpio_pin, uint8_t instance_id) {
+  void init(config_t* data) {
     // Stable readings require a brief period before communication
     vTaskDelay(2000.0 / portTICK_PERIOD_MS);
 
-    gpio_num_t gpio_num = static_cast<gpio_num_t>(gpio_pin);
+    gpio_num_t gpio_num = static_cast<gpio_num_t>(data->gpio_pin);
     ESP_LOGD(TAG,
-             "Find temperature devices on OneWire bus gpio #: %d:", gpio_num);
+             "Find temperature devices on OneWire bus gpio: %d:", gpio_num);
 
     rmt_channel_t tx_channel =
-        static_cast<rmt_channel_t>(RMT_CHANNEL_0 + instance_id * 2);
+        static_cast<rmt_channel_t>(RMT_CHANNEL_0 + data->instance_id * 2);
     rmt_channel_t rx_channel =
-        static_cast<rmt_channel_t>(RMT_CHANNEL_1 + instance_id * 2);
+        static_cast<rmt_channel_t>(RMT_CHANNEL_1 + data->instance_id * 2);
 
     owb =
         owb_rmt_initialize(&rmt_driver_info, gpio_num, tx_channel, rx_channel);
@@ -80,22 +87,22 @@ class temperature {
   }
 
   float average_temperature() {
-    std::vector<temperature_reading> temperature_vector = get_temps();
+    std::vector<temperature_reading_t> temperature_vector = get_temps();
     float sum = 0.0;
     for (const auto& temperature : temperature_vector) sum += temperature.value;
 
     return sum / temperature_vector.size();
   }
 
-  std::vector<temperature_reading> get_temps() {
-    std::vector<temperature_reading> readings;
+  std::vector<temperature_reading_t> get_temps() {
+    std::vector<temperature_reading_t> readings;
 
     if (devices.size() > 0) {
       ds18b20_convert_all(owb);
       ds18b20_wait_for_conversion(devices[0]);
 
       for (const auto& device : devices) {
-        temperature_reading reading;
+        temperature_reading_t reading;
         reading.error = ds18b20_read_temp(device, &reading.value);
         readings.emplace_back(reading);
       }
@@ -103,7 +110,7 @@ class temperature {
       for (const auto& reading : readings) {
         if (reading.error != DS18B20_OK) {
           ESP_LOGE(TAG, "Couldn't read data from temperature sensor");
-          std::vector<temperature_reading> empty;
+          std::vector<temperature_reading_t> empty;
           return empty;
         } else
           ESP_LOGD(TAG, "Temperature sensor reading (degrees C): %.1f",

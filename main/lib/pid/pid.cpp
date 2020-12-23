@@ -3,17 +3,17 @@
 #include <utilities.h>
 
 #include "esp_timer.h"
-
+namespace PID {
 PID::PID(double *input, double *setpoint, double *output, double outputMin,
-         double outputMax, double Kp, double Ki, double Kd, int pOn,
-         int controllerDirection) {
+         double outputMax, double Kp, double Ki, double Kd, PROPORTIONAL pOn,
+         DIRECTION controllerDirection) {
   _input = input;
   _setpoint = setpoint;
   _output = output;
   SetOutputLimits(outputMin, outputMax);
   setGains(Kp, Ki, Kd, pOn);
   SetControllerDirection(controllerDirection);
-  _timeStep = SECOND;
+  _timeStep = SECOND_IN_USEC;
 }
 
 void PID::SetOutputLimits(double min, double max) {
@@ -32,17 +32,17 @@ void PID::SetOutputLimits(double min, double max) {
     _outputSum = _outputMin;
 }
 
-void PID::setGains(double Kp, double Ki, double Kd, int pOn) {
+void PID::setGains(double Kp, double Ki, double Kd, PROPORTIONAL pOn) {
   if (Kp < 0 || Ki < 0 || Kd < 0) return;
 
   _pOn = pOn;
-  _pOnE = pOn == P_ON_E;
-  double sampleTimeInSec = _timeStep / SECOND;
+  _pOnE = pOn == PROPORTIONAL::ON_ERROR;
+  double sampleTimeInSec = _timeStep / SECOND_IN_USEC;
   _Kp = Kp;
   _Ki = Ki * sampleTimeInSec;
   _Kd = Kd / sampleTimeInSec;
 
-  if (_controllerDirection == REVERSE) {
+  if (_controllerDirection == DIRECTION::REVERSE) {
     _Kp = (0 - _Kp);
     _Ki = (0 - _Ki);
     _Kd = (0 - _Kd);
@@ -96,19 +96,19 @@ void PID::run() {
 
       if (!_pOnE) _outputSum -= _Kp * dInput;
 
-      _outputSum = clamp_val(_outputSum, _outputMin, _outputMax);
+      _outputSum = Utilities::clamp_val(_outputSum, _outputMin, _outputMax);
 
       double output = _pOnE ? _Kp * error : 0;
 
       output += _outputSum - _Kd * dInput;
 
-      *_output = clamp_val(output, _outputMin, _outputMax);
+      *_output = Utilities::clamp_val(output, _outputMin, _outputMax);
       _previousInput = *_input;
     }
   }
 }
 
-void PID::SetControllerDirection(int Direction) {
+void PID::SetControllerDirection(DIRECTION Direction) {
   if (Direction != _controllerDirection) {
     _Kp = (0 - _Kp);
     _Ki = (0 - _Ki);
@@ -129,3 +129,4 @@ void PID::reset() {
 }
 
 bool PID::isStopped() { return _stopped; }
+}  // namespace PID

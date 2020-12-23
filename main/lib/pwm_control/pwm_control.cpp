@@ -1,5 +1,6 @@
 #include "pwm_control.h"
 
+namespace PWMControl {
 esp_err_t PWMControl::init() {
   esp_err_t rv = _max31790->init();
   if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
@@ -151,3 +152,4 @@ esp_err_t PWMControl::getPWMDutyPercentComplete(uint8_t* pwmDutyPercent) {
   }
   return ESP_OK;
 }
+}  // namespace PWMControl

@@ -4,6 +4,8 @@
 #define WifiProvMgr_h
 
 #include <dispatcher.h>
+#include <esp_event.h>
+#include <stdint.h>
 
 #include <functional>
 
@@ -12,19 +14,19 @@ const int WIFI_CONNECTED_EVENT = BIT0;
 }
 
 namespace wifi_prov_mgr {
-enum class WifiAssociationState : int {
+enum class WifiAssociationState : uint8_t {
   CONNECTED = 0,
   DISCONNECTED = 1,
   CONNECTING = 2
 };
 
-struct WifiConnectionState {
+typedef struct WifiConnectionState {
   WifiAssociationState wifiState = WifiAssociationState::DISCONNECTED;
   std::string ipAddr = "N/A";
-};
+} WifiConnectionState_t;
 
 using wificallback_t = std::function<void(WifiAssociationState)>;
-using WifiConnectionStateCB = std::function<void(WifiConnectionState)>;
+using WifiConnectionStateCB = std::function<void(WifiConnectionState_t)>;
 class wifi_prov_mgr {
  public:
   wifi_prov_mgr() = default;
@@ -37,7 +39,7 @@ class wifi_prov_mgr {
  private:
   void wifiStateChanged(WifiAssociationState state);
 
-  Dispatcher<WifiConnectionState> mWifiStateNotifier;
+  Utilities::Dispatcher<WifiConnectionState_t> mWifiStateNotifier;
   // Need to store so doesnt go out of scope in C land
   wificallback_t mWifiCallback;
 };

@@ -3,19 +3,23 @@
 #ifndef PID_H
 #define PID_H
 
+#include <stdint.h>
+
+namespace {
+const float SECOND_IN_USEC = 1000000.0;
+}
+
+namespace PID {
+enum class DIRECTION : const uint8_t { DIRECT = 0, REVERSE = 1 };
+enum class PROPORTIONAL : const uint8_t { ON_MEASUREMENT = 0, ON_ERROR = 1 };
+
 class PID {
  public:
-#define DIRECT 0
-#define REVERSE 1
-#define P_ON_M 0
-#define P_ON_E 1
-#define SECOND 1000000.0
-
   PID(double *input, double *setpoint, double *output, double outputMin,
-      double outputMax, double Kp, double Ki, double Kd, int pOn,
-      int controllerDirection);
+      double outputMax, double Kp, double Ki, double Kd, PROPORTIONAL pOn,
+      DIRECTION controllerDirection);
   void SetOutputLimits(double Min, double Max);
-  void setGains(double Kp, double Ki, double Kd, int pOn);
+  void setGains(double Kp, double Ki, double Kd, PROPORTIONAL pOn);
   void setGains(double Kp, double Ki, double Kd);
   void setBangBang(double bangOn, double bangOff);
   void setBangBang(double bangRange);
@@ -25,7 +29,7 @@ class PID {
   void stop();
   void reset();
   bool isStopped();
-  void SetControllerDirection(int Direction);
+  void SetControllerDirection(DIRECTION Direction);
 
  private:
   double _Kp, _Ki, _Kd;
@@ -34,8 +38,9 @@ class PID {
   double *_input, *_setpoint, *_output;
   double _outputMin, _outputMax, _outputSum;
   int64_t _timeStep, _lastStep;
-  int _controllerDirection;
-  int _pOn;
+  DIRECTION _controllerDirection;
+  PROPORTIONAL _pOn;
   bool _stopped, _pOnE;
 };
+}  // namespace PID
 #endif

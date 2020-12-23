@@ -2,8 +2,7 @@
 
 #include <utilities.h>
 
-#include <algorithm>
-
+namespace PWMControl {
 esp_err_t MAX31790::init() {
   CONFIG config;
   uint8_t rv = readConfig(&config);
@@ -380,7 +379,8 @@ esp_err_t MAX31790::writeTachTargetRaw(const uint8_t& index, uint16_t data,
   rv = writeFanDynamics(index, fanDynamics);
   if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
 
-  data = clamp_val(data, FAN_TACH_MIN, FAN_TACH_MAX) << TACH_SHIFT_BITS;
+  data = Utilities::clamp_val(data, FAN_TACH_MIN, FAN_TACH_MAX)
+         << TACH_SHIFT_BITS;
 
   const uint8_t numBytes = 2;
   const bool reverse = false;
@@ -404,7 +404,7 @@ esp_err_t MAX31790::writeTachTargetRPM(const uint8_t& index, uint16_t data) {
 
   Speed_Range speedRange = speedRangeFromRPM(data);
 
-  data = clamp_val(data, FAN_RPM_MIN, FAN_RPM_MAX);
+  data = Utilities::clamp_val(data, FAN_RPM_MIN, FAN_RPM_MAX);
   data = ((SEC_PER_MIN / (data * PULES_PER_REV)) *
           static_cast<uint8_t>(speedRange) * CLOCK_CYCLES);
 
@@ -423,3 +423,4 @@ esp_err_t MAX31790::writeWindow(const uint8_t& index, const uint8_t& data) {
   return _i2c->writeByte(_deviceAddress, static_cast<uint8_t>(Window[index]),
                          data);
 }
+}  // namespace PWMControl

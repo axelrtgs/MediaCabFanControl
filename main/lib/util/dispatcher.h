@@ -6,6 +6,7 @@
 #include <functional>
 #include <list>
 
+namespace Utilities {
 template <typename... Args>
 class Dispatcher {
  public:
@@ -42,4 +43,5 @@ class Dispatcher {
  private:
   std::list<CBType> cbs;
 };
+}
 #endif

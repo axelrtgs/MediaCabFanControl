@@ -3,6 +3,8 @@
 #ifndef homekit_h
 #define homekit_h
 
+#include <stdint.h>
+
 enum target_state_value {
   OFF = 0,
   HEAT = 1,

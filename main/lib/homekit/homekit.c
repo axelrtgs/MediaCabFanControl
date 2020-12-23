@@ -1,11 +1,14 @@
 #include "homekit.h"
 
 #include <driver/gpio.h>
+#include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <homekit/characteristics.h>
 #include <homekit/homekit.h>
 #include <string.h>
+
+static const char *TAG = "homekit";
 
 void on_update(homekit_characteristic_t *ch, homekit_value_t value,
                void *context);
@@ -51,7 +54,7 @@ void update_state() {
     if (cur_state != HEAT) {
       current_state.value = HOMEKIT_UINT8(HEAT);
       homekit_characteristic_notify(&current_state, current_state.value);
-      printf("Temp Low Heating Active");
+      ESP_LOGI(TAG, "Temp Low Heating Active");
 
       // heaterOn();
       // coolerOff();
@@ -63,7 +66,7 @@ void update_state() {
     if (cur_state != COOL) {
       current_state.value = HOMEKIT_UINT8(COOL);
       homekit_characteristic_notify(&current_state, current_state.value);
-      printf("Temp High Cooling Active");
+      ESP_LOGI(TAG, "Temp High Cooling Active");
 
       // coolerOn();
       // heaterOff();
@@ -74,7 +77,7 @@ void update_state() {
     if (cur_state != OFF) {
       current_state.value = HOMEKIT_UINT8(OFF);
       homekit_characteristic_notify(&current_state, current_state.value);
-      printf("Temps Good Turning Off");
+      ESP_LOGI(TAG, "Temps Good Turning Off");
 
       // coolerOff();
       // heaterOff();
@@ -114,32 +117,31 @@ void thermostat_identify_task(void *_args) {
 }
 
 void thermostat_identify(homekit_value_t _value) {
-  printf("LED identify\n");
+  ESP_LOGI(TAG, "LED identify");
   xTaskCreate(thermostat_identify_task, "Thermostat identify", 512, NULL, 2,
               NULL);
 }
 
-void temperature_sensor_task(void *_args) {
-  float temperature_value;
-  while (1) {
-    int8_t error = ds18b20_read_temp(&temperature_value);
-    if (error == 0) {
-      printf("Got readings: temperature %g\n", temperature_value);
-      current_temperature.value = HOMEKIT_FLOAT(temperature_value);
+// void temperature_sensor_task(void *_args) {
+//   float temperature_value;
+//   while (1) {
+//     int8_t error = ds18b20_read_temp(&temperature_value);
+//     if (error == 0) {
+//       ESP_LOGD(TAG, "Got readings: temperature %g\n", temperature_value);
+//       current_temperature.value = HOMEKIT_FLOAT(temperature_value);
 
-      homekit_characteristic_notify(&current_temperature,
-                                    current_temperature.value);
+//       homekit_characteristic_notify(&current_temperature,
+//                                     current_temperature.value);
 
-      update_state();
-    } else {
-      printf("Couldnt read data from sensor\n");
-    }
-    vTaskDelay(TEMPERATURE_POLL_PERIOD / portTICK_PERIOD_MS);
-  }
-}
+//       update_state();
+//     } else
+//       ESP_LOGE(TAG, "Couldnt read data from sensor\n");
+//     vTaskDelay(TEMPERATURE_POLL_PERIOD / portTICK_PERIOD_MS);
+//   }
+// }
 
 void thermostat_init() {
-  xTaskCreate(temperature_sensor_task, "Thermostat", 2048, NULL, 2, NULL);
+  // xTaskCreate(temperature_sensor_task, "Thermostat", 2048, NULL, 2, NULL);
 }
 
 homekit_accessory_t *accessories[] = {
@@ -200,9 +202,9 @@ void homekit_init(fan_kit *fanKit) {
 
   led_init();
 
-  if (temperature_init()) {
-    thermostat_init();
-  }
+  // if (temperature_init()) {
+  thermostat_init();
+  // }
 
   homekit_server_init(&config);
 }

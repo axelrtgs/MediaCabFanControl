@@ -11,6 +11,7 @@ const uint8_t NUM_FANS = 8;
 const uint8_t NUM_PWM = 4;
 }  // namespace
 
+namespace PWMControl {
 class PWMControl {
  public:
   PWMControl(I2C_t *i2c, const uint8_t &deviceAddress) {
@@ -44,4 +45,5 @@ class PWMControl {
  private:
   MAX31790 *_max31790;
 };
+}  // namespace PWMControl
 #endif
