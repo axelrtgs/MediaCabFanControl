@@ -25,6 +25,7 @@ const uint32_t I2C_BUS_SPEED = 400000;
 const uint8_t MAX31790_ADDRESS = 0x2F;
 const uint32_t TEMPERATURE_POLL_PERIOD_MS = 5000;
 const float TARGET_TEMP = 25.0;
+const uint16_t MIN_FAN_PWM = 125;
 
 const int TOLERANCE = 10;
 const int BANG_ON = false;
@@ -81,16 +82,16 @@ void app_main() {
 }
 
 void temperature_sensor_task(void* pvParameters) {
-  ESP_LOGD(TAG, "Starting temperature_sensor_task");
   temperature::config_t* zone_data = (temperature::config_t*)pvParameters;
   uint8_t zone_id = zone_data->instance_id;
 
+  ESP_LOGD(TAG, "Starting temperature_sensor_task %d", zone_id);
   std::shared_ptr<temperature::temperature> temperature(
       new temperature::temperature());
 
   temperature->init(zone_data);
   PID::PIDEnhanced* PID =
-      new PID::PIDEnhanced(TOLERANCE, BANG_ON, BANG_OFF, PWM_MIN, PWM_MAX,
+      new PID::PIDEnhanced(TOLERANCE, BANG_ON, BANG_OFF, MIN_FAN_PWM, PWM_MAX,
                            CONSERVATIVE_TUNE, AGGRESSIVE_TUNE);
   while (1) {
     auto average_temperature = temperature->average_temperature();
@@ -134,7 +135,8 @@ void pwm_control_task(void* _pvParameters) {
 
     uint16_t pwm_output_a = static_cast<uint16_t>(pwm_output[0]);
     uint16_t pwm_output_b = static_cast<uint16_t>(pwm_output[1]);
-    uint16_t pwmNewTarget[] = {pwm_output_a, pwm_output_a, pwm_output_b, pwm_output_b};
+    uint16_t pwmNewTarget[] = {pwm_output_a, pwm_output_a, pwm_output_b,
+                               pwm_output_b};
     pwmControl->setPWMTargetComplete(pwmNewTarget);
 
     uint16_t pwmTarget[NUM_PWM];
@@ -142,6 +144,13 @@ void pwm_control_task(void* _pvParameters) {
 
     for (auto it = std::begin(pwmTarget); it != std::end(pwmTarget); ++it) {
       ESP_LOGD(TAG, "New PWM target is: %d\n", *it);
+    }
+
+    uint16_t tachRPM[NUM_FANS];
+    pwmControl->getTachRPMComplete(tachRPM);
+
+    for (auto it = std::begin(tachRPM); it != std::end(tachRPM); ++it) {
+      ESP_LOGD(TAG, "Tach RPM is: %d\n", *it);
     }
     vTaskDelay(TEMPERATURE_POLL_PERIOD_MS / portTICK_PERIOD_MS);
   }
@@ -155,8 +164,9 @@ void wifi_callback(wifi_prov_mgr::WifiConnectionState_t state) {
     connected = true;
     xTaskCreate(temperature_sensor_task, "ZONE_A", 2560, (void*)&ZONE_A_CONFIG,
                 2, NULL);
-    xTaskCreate(temperature_sensor_task, "ZONE_B", 2560, (void*)&ZONE_B_CONFIG,
-                2, NULL);
+    xTaskCreate(temperature_sensor_task, "ZONE_B", 2560,
+    (void*)&ZONE_B_CONFIG,
+               2, NULL);
     xTaskCreate(pwm_control_task, "PWM_CONTROL", 2560, NULL, 2, NULL);
   } else if (state.wifiState ==
                  wifi_prov_mgr::WifiAssociationState::DISCONNECTED &&

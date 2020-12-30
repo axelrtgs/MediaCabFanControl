@@ -117,7 +117,7 @@ esp_err_t MAX31790::writeFanConfig(const uint8_t& index,
                  static_cast<uint8_t>(fanConfig.spinUp) |
                  static_cast<uint8_t>(fanConfig.mode);
   return _i2c->writeByte(_deviceAddress,
-                         static_cast<uint8_t>(Register::PWM_Frequency), data);
+                         static_cast<uint8_t>(FanConfig[index]), data);
 }
 
 esp_err_t MAX31790::readFanDynamics(const uint8_t& index,

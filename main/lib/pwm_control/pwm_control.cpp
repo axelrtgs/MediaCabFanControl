@@ -40,18 +40,18 @@ esp_err_t PWMControl::init() {
       .spinUp = MAX31790::Spin_Up::Sec_1,
       .mode = MAX31790::Mode::PWM};
 
-  for (int i = 1; i <= NR_CHANNEL; i++) {
+  for (int i = 0; i < NR_CHANNEL; i++) {
     switch (i) {
+      case 0:
       case 1:
-      case 2:
-      case 3:
         rv = _max31790->writeFanConfig(i, fanConfigTACHInput);
         if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
         break;
 
+      case 2:
+      case 3:
       case 4:
       case 5:
-      case 6:
         rv = _max31790->writeFanConfig(i, fanConfigPWMOutput);
         if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
         break;
@@ -63,6 +63,12 @@ esp_err_t PWMControl::init() {
     rv = _max31790->writeWindow(i, 0);
     if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
   }
+
+  MAX31790::PWMFREQ pwmFreq{.PWM1_3 = MAX31790::PWMFreq::kHz_25,
+                            .PWM4_6 = MAX31790::PWMFreq::kHz_25};
+
+  rv = _max31790->writePWMFreq(pwmFreq);
+  if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
 
   return ESP_OK;
 }
@@ -93,7 +99,7 @@ esp_err_t PWMControl::setPWMTargetByIndex(const uint8_t& index,
 
 esp_err_t PWMControl::setPWMTargetComplete(const uint16_t* pwmTarget) {
   for (int i = 0; i < NUM_PWM; i++) {
-    uint8_t rv = setPWMTargetByIndex(i, pwmTarget[i]);
+    uint8_t rv = setPWMTargetByIndex(PWM_INDEXES[i], pwmTarget[i]);
     if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
   }
   return ESP_OK;
@@ -109,7 +115,7 @@ esp_err_t PWMControl::getPWMTargetByIndex(const uint8_t& index,
 esp_err_t PWMControl::getPWMTargetComplete(uint16_t* pwmTarget) {
   for (int i = 0; i < NUM_PWM; i++) {
     uint16_t pwm;
-    uint8_t rv = getPWMTargetByIndex(i, &pwm);
+    uint8_t rv = getPWMTargetByIndex(PWM_INDEXES[i], &pwm);
     if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
     pwmTarget[i] = pwm;
   }
@@ -126,7 +132,7 @@ esp_err_t PWMControl::getPWMDutyByIndex(const uint8_t& index,
 esp_err_t PWMControl::getPWMDutyComplete(uint16_t* pwmDuty) {
   for (int i = 0; i < NUM_PWM; i++) {
     uint16_t pwm;
-    uint8_t rv = getPWMDutyByIndex(i, &pwm);
+    uint8_t rv = getPWMDutyByIndex(PWM_INDEXES[i], &pwm);
     if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
     pwmDuty[i] = pwm;
   }
@@ -146,7 +152,7 @@ esp_err_t PWMControl::getPWMDutyPercentByIndex(const uint8_t& index,
 esp_err_t PWMControl::getPWMDutyPercentComplete(uint8_t* pwmDutyPercent) {
   for (int i = 0; i < NUM_PWM; i++) {
     uint8_t pwmPercent;
-    uint8_t rv = getPWMDutyPercentByIndex(i, &pwmPercent);
+    uint8_t rv = getPWMDutyPercentByIndex(PWM_INDEXES[i], &pwmPercent);
     if (ESP_ERROR_CHECK_WITHOUT_ABORT(rv)) return rv;
     pwmDutyPercent[i] = pwmPercent;
   }

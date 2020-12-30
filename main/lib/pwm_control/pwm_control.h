@@ -9,6 +9,7 @@
 namespace {
 const uint8_t NUM_FANS = 8;
 const uint8_t NUM_PWM = 4;
+const uint8_t PWM_INDEXES[NUM_PWM] = {2, 3, 4, 5};
 }  // namespace
 
 namespace PWMControl {
