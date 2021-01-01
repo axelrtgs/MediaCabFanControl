@@ -4,9 +4,8 @@
 
 #include "esp_timer.h"
 namespace PID {
-PID::PID(double *input, double *setpoint, double *output, double outputMin,
-         double outputMax, double Kp, double Ki, double Kd, PROPORTIONAL pOn,
-         DIRECTION controllerDirection) {
+PID::PID(double *input, double *setpoint, double *output, double outputMin, double outputMax, double Kp, double Ki,
+         double Kd, PROPORTIONAL pOn, DIRECTION controllerDirection) {
   _input = input;
   _setpoint = setpoint;
   _output = output;
@@ -17,7 +16,8 @@ PID::PID(double *input, double *setpoint, double *output, double outputMin,
 }
 
 void PID::SetOutputLimits(double min, double max) {
-  if (min >= max) return;
+  if (min >= max)
+    return;
   _outputMin = min;
   _outputMax = max;
 
@@ -33,7 +33,8 @@ void PID::SetOutputLimits(double min, double max) {
 }
 
 void PID::setGains(double Kp, double Ki, double Kd, PROPORTIONAL pOn) {
-  if (Kp < 0 || Ki < 0 || Kd < 0) return;
+  if (Kp < 0 || Ki < 0 || Kd < 0)
+    return;
 
   _pOn = pOn;
   _pOnE = pOn == PROPORTIONAL::ON_ERROR;
@@ -49,9 +50,7 @@ void PID::setGains(double Kp, double Ki, double Kd, PROPORTIONAL pOn) {
   }
 }
 
-void PID::setGains(double Kp, double Ki, double Kd) {
-  setGains(Kp, Ki, Kd, _pOn);
-}
+void PID::setGains(double Kp, double Ki, double Kd) { setGains(Kp, Ki, Kd, _pOn); }
 
 void PID::setBangBang(double bangOn, double bangOff) {
   _bangOn = bangOn;
@@ -69,9 +68,7 @@ void PID::setTimeStep(int64_t timeStep) {
   }
 }
 
-bool PID::atSetPoint(double threshold) {
-  return abs(*_setpoint - *_input) <= threshold;
-}
+bool PID::atSetPoint(double threshold) { return abs(*_setpoint - *_input) <= threshold; }
 
 void PID::run() {
   if (_stopped) {
@@ -94,7 +91,8 @@ void PID::run() {
       double dInput = *_input - _previousInput;
       _outputSum += _Ki * error;
 
-      if (!_pOnE) _outputSum -= _Kp * dInput;
+      if (!_pOnE)
+        _outputSum -= _Kp * dInput;
 
       _outputSum = Utilities::clamp_val(_outputSum, _outputMin, _outputMax);
 
@@ -129,4 +127,4 @@ void PID::reset() {
 }
 
 bool PID::isStopped() { return _stopped; }
-}  // namespace PID
+} // namespace PID

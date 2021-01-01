@@ -16,7 +16,7 @@ set(COMPONENT_ADD_INCLUDEDIRS
         "lib/util"
         )
 
-set(COMPONENT_REQUIRES nvs_flash wifi_provisioning homekit esp32-owb ds18b20 I2Cbus)
+set(COMPONENT_REQUIRES nvs_flash wifi_provisioning homekit esp32-owb ds18b20 I2Cbus mqtt json)
 
 register_component()
 

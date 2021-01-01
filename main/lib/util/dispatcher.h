@@ -7,16 +7,15 @@
 #include <list>
 
 namespace Utilities {
-template <typename... Args>
-class Dispatcher {
- public:
+template <typename... Args> class Dispatcher {
+public:
   using CBType = std::function<void(Args...)>;
 
   class CBID {
-   public:
+  public:
     CBID() : valid(false) {}
 
-   private:
+  private:
     friend class Dispatcher<Args...>;
     CBID(typename std::list<CBType>::iterator i) : iter(i), valid(true) {}
 
@@ -33,15 +32,17 @@ class Dispatcher {
   }
 
   void delCB(CBID &id) {
-    if (id.valid) cbs.erase(id.iter);
+    if (id.valid)
+      cbs.erase(id.iter);
   }
 
   void broadcast(Args... args) {
-    for (auto &cb : cbs) cb(args...);
+    for (auto &cb : cbs)
+      cb(args...);
   }
 
- private:
+private:
   std::list<CBType> cbs;
 };
-}
+} // namespace Utilities
 #endif

@@ -18,7 +18,7 @@ typedef struct {
   enum target_state_value mode;
 } fan_kit;
 
-fan_kit* extern_values;
+fan_kit *extern_values;
 
-void homekit_init(fan_kit* fanKit);
+void homekit_init(fan_kit *fanKit);
 #endif

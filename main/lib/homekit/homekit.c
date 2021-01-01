@@ -10,27 +10,19 @@
 
 static const char *TAG = "homekit";
 
-void on_update(homekit_characteristic_t *ch, homekit_value_t value,
-               void *context);
+void on_update(homekit_characteristic_t *ch, homekit_value_t value, void *context);
 
-homekit_characteristic_t current_temperature =
-    HOMEKIT_CHARACTERISTIC_(CURRENT_TEMPERATURE, 0.0);
-homekit_characteristic_t target_temperature = HOMEKIT_CHARACTERISTIC_(
-    TARGET_TEMPERATURE, 22.0,
-    .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
-homekit_characteristic_t units =
-    HOMEKIT_CHARACTERISTIC_(TEMPERATURE_DISPLAY_UNITS, 0);
-homekit_characteristic_t current_state =
-    HOMEKIT_CHARACTERISTIC_(CURRENT_HEATING_COOLING_STATE, OFF);
-homekit_characteristic_t target_state = HOMEKIT_CHARACTERISTIC_(
-    TARGET_HEATING_COOLING_STATE, COOL,
-    .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
+homekit_characteristic_t current_temperature = HOMEKIT_CHARACTERISTIC_(CURRENT_TEMPERATURE, 0.0);
+homekit_characteristic_t target_temperature =
+    HOMEKIT_CHARACTERISTIC_(TARGET_TEMPERATURE, 22.0, .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
+homekit_characteristic_t units = HOMEKIT_CHARACTERISTIC_(TEMPERATURE_DISPLAY_UNITS, 0);
+homekit_characteristic_t current_state = HOMEKIT_CHARACTERISTIC_(CURRENT_HEATING_COOLING_STATE, OFF);
+homekit_characteristic_t target_state =
+    HOMEKIT_CHARACTERISTIC_(TARGET_HEATING_COOLING_STATE, COOL, .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
 homekit_characteristic_t cooling_threshold = HOMEKIT_CHARACTERISTIC_(
-    COOLING_THRESHOLD_TEMPERATURE, 25.0,
-    .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
+    COOLING_THRESHOLD_TEMPERATURE, 25.0, .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
 homekit_characteristic_t heating_threshold = HOMEKIT_CHARACTERISTIC_(
-    HEATING_THRESHOLD_TEMPERATURE, 15.0,
-    .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
+    HEATING_THRESHOLD_TEMPERATURE, 15.0, .callback = HOMEKIT_CHARACTERISTIC_CALLBACK(on_update));
 
 homekit_server_config_t config;
 homekit_service_t *services[10 + 1];
@@ -49,8 +41,7 @@ void update_state() {
   float heat_thresh = heating_threshold.value.float_value;
   float cool_thresh = cooling_threshold.value.float_value;
 
-  if ((targ_state == HEAT && curr_temp < target_temp) ||
-      (targ_state == AUTO && curr_temp < heat_thresh)) {
+  if ((targ_state == HEAT && curr_temp < target_temp) || (targ_state == AUTO && curr_temp < heat_thresh)) {
     if (cur_state != HEAT) {
       current_state.value = HOMEKIT_UINT8(HEAT);
       homekit_characteristic_notify(&current_state, current_state.value);
@@ -61,8 +52,7 @@ void update_state() {
       // fanOff();
       // fanOn(HEATER_FAN_DELAY);
     }
-  } else if ((targ_state == COOL && curr_temp > target_temp) ||
-             (targ_state == AUTO && curr_temp > cool_thresh)) {
+  } else if ((targ_state == COOL && curr_temp > target_temp) || (targ_state == AUTO && curr_temp > cool_thresh)) {
     if (cur_state != COOL) {
       current_state.value = HOMEKIT_UINT8(COOL);
       homekit_characteristic_notify(&current_state, current_state.value);
@@ -89,10 +79,7 @@ void update_state() {
   extern_values->mode = cur_state;
 }
 
-void on_update(homekit_characteristic_t *ch, homekit_value_t value,
-               void *context) {
-  update_state();
-}
+void on_update(homekit_characteristic_t *ch, homekit_value_t value, void *context) { update_state(); }
 
 void led_write(bool on) { gpio_set_level(led_gpio, on ? 1 : 0); }
 
@@ -118,8 +105,7 @@ void thermostat_identify_task(void *_args) {
 
 void thermostat_identify(homekit_value_t _value) {
   ESP_LOGI(TAG, "LED identify");
-  xTaskCreate(thermostat_identify_task, "Thermostat identify", 512, NULL, 2,
-              NULL);
+  xTaskCreate(thermostat_identify_task, "Thermostat identify", 512, NULL, 2, NULL);
 }
 
 // void temperature_sensor_task(void *_args) {
@@ -145,41 +131,34 @@ void thermostat_init() {
 }
 
 homekit_accessory_t *accessories[] = {
-    HOMEKIT_ACCESSORY(
-            .id = 1, .category = homekit_accessory_category_thermostat,
-            .services =
-                (homekit_service_t *[]){
-                    HOMEKIT_SERVICE(
-                        ACCESSORY_INFORMATION,
-                        .characteristics =
-                            (homekit_characteristic_t *[]){
-                                HOMEKIT_CHARACTERISTIC(NAME, "Fan Control"),
-                                HOMEKIT_CHARACTERISTIC(MANUFACTURER,
-                                                       "Axelrtgs"),
-                                HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER,
-                                                       "1234321"),
-                                HOMEKIT_CHARACTERISTIC(MODEL, "TwoZone"),
-                                HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION,
-                                                       "0.1"),
-                                HOMEKIT_CHARACTERISTIC(IDENTIFY,
-                                                       thermostat_identify),
-                                NULL,
-                            }),
-                    HOMEKIT_SERVICE(
-                        THERMOSTAT, .primary = true,
-                        .characteristics =
-                            (homekit_characteristic_t *[]){
-                                HOMEKIT_CHARACTERISTIC(NAME, "Fan Control"),
-                                &current_temperature,
-                                &target_temperature,
-                                &current_state,
-                                &target_state,
-                                &cooling_threshold,
-                                &heating_threshold,
-                                &units,
-                                NULL,
-                            }),
-                    NULL}),
+    HOMEKIT_ACCESSORY(.id = 1, .category = homekit_accessory_category_thermostat,
+                      .services =
+                          (homekit_service_t *[]){
+                              HOMEKIT_SERVICE(ACCESSORY_INFORMATION,
+                                              .characteristics =
+                                                  (homekit_characteristic_t *[]){
+                                                      HOMEKIT_CHARACTERISTIC(NAME, "Fan Control"),
+                                                      HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Axelrtgs"),
+                                                      HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "1234321"),
+                                                      HOMEKIT_CHARACTERISTIC(MODEL, "TwoZone"),
+                                                      HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "0.1"),
+                                                      HOMEKIT_CHARACTERISTIC(IDENTIFY, thermostat_identify),
+                                                      NULL,
+                                                  }),
+                              HOMEKIT_SERVICE(THERMOSTAT, .primary = true,
+                                              .characteristics =
+                                                  (homekit_characteristic_t *[]){
+                                                      HOMEKIT_CHARACTERISTIC(NAME, "Fan Control"),
+                                                      &current_temperature,
+                                                      &target_temperature,
+                                                      &current_state,
+                                                      &target_state,
+                                                      &cooling_threshold,
+                                                      &heating_threshold,
+                                                      &units,
+                                                      NULL,
+                                                  }),
+                              NULL}),
     NULL};
 
 homekit_server_config_t config = {
@@ -195,8 +174,7 @@ void homekit_init(fan_kit *fanKit) {
   extern_values->target_temp = target_temperature.value.float_value;
   extern_values->mode = current_state.value.int_value;
 
-  homekit_characteristic_notify(&current_temperature,
-                                current_temperature.value);
+  homekit_characteristic_notify(&current_temperature, current_temperature.value);
   homekit_characteristic_notify(&target_temperature, target_temperature.value);
   homekit_characteristic_notify(&current_state, current_state.value);
 

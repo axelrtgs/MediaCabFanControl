@@ -14,10 +14,9 @@ enum class DIRECTION : const uint8_t { DIRECT = 0, REVERSE = 1 };
 enum class PROPORTIONAL : const uint8_t { ON_MEASUREMENT = 0, ON_ERROR = 1 };
 
 class PID {
- public:
-  PID(double *input, double *setpoint, double *output, double outputMin,
-      double outputMax, double Kp, double Ki, double Kd, PROPORTIONAL pOn,
-      DIRECTION controllerDirection);
+public:
+  PID(double *input, double *setpoint, double *output, double outputMin, double outputMax, double Kp, double Ki,
+      double Kd, PROPORTIONAL pOn, DIRECTION controllerDirection);
   void SetOutputLimits(double Min, double Max);
   void setGains(double Kp, double Ki, double Kd, PROPORTIONAL pOn);
   void setGains(double Kp, double Ki, double Kd);
@@ -31,7 +30,7 @@ class PID {
   bool isStopped();
   void SetControllerDirection(DIRECTION Direction);
 
- private:
+private:
   double _Kp, _Ki, _Kd;
   double _previousInput;
   double _bangOn, _bangOff;
@@ -42,5 +41,5 @@ class PID {
   PROPORTIONAL _pOn;
   bool _stopped, _pOnE;
 };
-}  // namespace PID
+} // namespace PID
 #endif
