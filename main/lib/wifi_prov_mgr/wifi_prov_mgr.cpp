@@ -96,8 +96,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int event_id, 
 void wifi_prov_mgr::set_hostname(const char *prefix = "ESP32_") {
   uint8_t eth_mac[6];
   esp_wifi_get_mac(WIFI_IF_STA, eth_mac);
-  device_hostname = "";
-  sprintf(device_hostname, "%s%02X%02X%02X", prefix, eth_mac[3], eth_mac[4], eth_mac[5]);
+  snprintf(device_hostname, MAX_HOSTNAME_LENGTH, "%s%02X%02X%02X", prefix, eth_mac[3], eth_mac[4], eth_mac[5]);
   ESP_LOGD(TAG, "device_hostname is set to: %s", get_hostname());
 }
 
@@ -120,7 +119,8 @@ void wifi_prov_mgr::init(const char *pop) {
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
   wifi_prov_mgr_config_t config = {.scheme = wifi_prov_scheme_ble,
-                                   .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM};
+                                   .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM,
+                                   .app_event_handler = WIFI_PROV_EVENT_HANDLER_NONE};
 
   ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
 

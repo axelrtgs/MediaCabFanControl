@@ -13,7 +13,7 @@ template <typename T> T clamp_val(const T &Value, const T &Min, const T &Max) {
   return std::max(Min, std::min(Value, Max));
 }
 
-const char *resolve_host(const char *hostname) {
+inline const char *resolve_host(const char *hostname) {
   static char buf[64];
   struct hostent *host;
   const char *TAG = "Resolve";

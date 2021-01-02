@@ -12,7 +12,8 @@
 
 namespace {
 const int WIFI_CONNECTED_EVENT = BIT0;
-}
+const size_t MAX_HOSTNAME_LENGTH = 25;
+} // namespace
 
 namespace wifi_prov_mgr {
 enum class WifiAssociationState : uint8_t { CONNECTED = 0, DISCONNECTED = 1, CONNECTING = 2 };
@@ -39,9 +40,8 @@ public:
 private:
   void wifiStateChanged(WifiAssociationState state);
 
-  inline static char *device_hostname;
+  inline static char device_hostname[MAX_HOSTNAME_LENGTH];
   Utilities::Dispatcher<WifiConnectionState_t> mWifiStateNotifier;
-  // Need to store so doesnt go out of scope in C land
   wificallback_t mWifiCallback;
 };
 } // namespace wifi_prov_mgr

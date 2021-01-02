@@ -128,8 +128,7 @@ fabric.properties
 
 #Custom
 build/
-\.DS_Store
-
-\.idea/
-
-sdkconfig\.old
+.DS_Store
+.idea/
+log.txt
+sdkconfig.old

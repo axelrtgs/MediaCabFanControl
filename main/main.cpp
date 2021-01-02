@@ -1,21 +1,22 @@
 
 #include <memory>
 
+#include "config.h"
+#include "httpd.h"
+#include "log.h"
+#include "mqtt.h"
+#include "ota.h"
 #include "pid_enhanced.h"
 #include "pwm_control.h"
+#include "temperature.h"
+#include "utilities.h"
 #include "wifi_prov_mgr.h"
-
-extern "C" {
-#include <cJSON.h>
-#include <esp_log.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <mqtt_client.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
+extern "C" {
 #include "driver/gpio.h"
 #include "esp_event.h"
 #include "esp_netif.h"
@@ -29,7 +30,19 @@ extern "C" {
 #include "lwip/netdb.h"
 #include "lwip/sockets.h"
 #include "nvs_flash.h"
-#include "temperature.h"
+#include <cJSON.h>
+#include <esp_err.h>
+#include <esp_log.h>
+#include <esp_system.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
+#include <freertos/timers.h>
+#include <mdns.h>
+#include <mqtt_client.h>
+#include <nvs.h>
+#include <nvs_flash.h>
+#include <string.h>
 }
 
 namespace {
@@ -80,6 +93,273 @@ data_message_t data_message;
 
 extern "C" {
 void wifi_callback(wifi_prov_mgr::WifiConnectionState_t state);
+
+#define MAX_TOPIC_LEN 256
+
+/* Bookkeeping functions */
+static void uptime_publish(void) {
+  char topic[MAX_TOPIC_LEN];
+  char buf[16];
+
+  /* Only publish uptime when connected, we don't want it to be queued */
+  if (!MQTT::mqtt_is_connected())
+    return;
+
+  /* Uptime (in seconds) */
+  sprintf(buf, "%lld", esp_timer_get_time() / 1000 / 1000);
+  snprintf(topic, MAX_TOPIC_LEN, "%s/Uptime", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_publish(topic, (uint8_t *)buf, strlen(buf), Config::config_mqtt_qos_get(),
+                     Config::config_mqtt_retained_get());
+
+  /* Free memory (in bytes) */
+  sprintf(buf, "%u", esp_get_free_heap_size());
+  snprintf(topic, MAX_TOPIC_LEN, "%s/FreeMemory", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_publish(topic, (uint8_t *)buf, strlen(buf), Config::config_mqtt_qos_get(),
+                     Config::config_mqtt_retained_get());
+}
+
+static void self_publish(void) {
+  char topic[MAX_TOPIC_LEN];
+  char *payload;
+
+  /* App version */
+  payload = (char *)BLE2MQTT_VER;
+  snprintf(topic, MAX_TOPIC_LEN, "%s/Version", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_publish(topic, (uint8_t *)payload, strlen(payload), Config::config_mqtt_qos_get(),
+                     Config::config_mqtt_retained_get());
+
+  /* Config version */
+  payload = (char *)Config::config_version_get();
+  snprintf(topic, MAX_TOPIC_LEN, "%s/ConfigVersion", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_publish(topic, (uint8_t *)payload, strlen(payload), Config::config_mqtt_qos_get(),
+                     Config::config_mqtt_retained_get());
+
+  uptime_publish();
+}
+
+/* OTA functions */
+static void ota_on_completed(OTA::TYPE type, OTA::ERR err) {
+  ESP_LOGI(TAG, "Update completed: %s", OTA::err_to_str(err));
+
+  /* All done, restart */
+  if (err == OTA::ERR::SUCCESS) {
+    vTaskSuspendAll();
+    esp_restart();
+    xTaskResumeAll();
+  }
+}
+
+static void _ota_on_completed(OTA::TYPE type, OTA::ERR err);
+
+static void ota_on_mqtt(const char *topic, const uint8_t *payload, size_t len, void *ctx) {
+  char *url = (char *)malloc(len + 1);
+  OTA::TYPE type = static_cast<OTA::TYPE>((int)ctx);
+  OTA::ERR err;
+
+  memcpy(url, payload, len);
+  url[len] = '\0';
+  ESP_LOGI(TAG, "Starting %s update from %s", type == OTA::TYPE::FIRMWARE ? "firmware" : "configuration", url);
+
+  if ((err = OTA::download(type, url, _ota_on_completed)) != OTA::ERR::SUCCESS)
+    ESP_LOGE(TAG, "Failed updating: %s", OTA::err_to_str(err));
+  free(url);
+}
+
+static void ota_subscribe(void) {
+  char topic[27];
+
+  /* Register for both a specific topic for this device and a general one */
+  sprintf(topic, "%s/OTA/Firmware", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_subscribe(topic, 0, ota_on_mqtt, (void *)OTA::TYPE::FIRMWARE, NULL);
+  MQTT::mqtt_subscribe("BLE2MQTT/OTA/Firmware", 0, ota_on_mqtt, (void *)OTA::TYPE::FIRMWARE, NULL);
+
+  sprintf(topic, "%s/OTA/Config", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_subscribe(topic, 0, ota_on_mqtt, (void *)OTA::TYPE::CONFIG, NULL);
+  MQTT::mqtt_subscribe("BLE2MQTT/OTA/Config", 0, ota_on_mqtt, (void *)OTA::TYPE::CONFIG, NULL);
+}
+
+static void ota_unsubscribe(void) {
+  char topic[27];
+
+  sprintf(topic, "%s/OTA/Firmware", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_unsubscribe(topic);
+  MQTT::mqtt_unsubscribe("BLE2MQTT/OTA/Firmware");
+
+  sprintf(topic, "%s/OTA/Config", wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+  MQTT::mqtt_unsubscribe(topic);
+  MQTT::mqtt_unsubscribe("BLE2MQTT/OTA/Config");
+}
+
+static void cleanup(void) { ota_unsubscribe(); }
+
+/* Network callback functions */
+static void network_on_connected(void) {
+  Log::log_start(Config::config_log_host_get(), Config::config_log_port_get());
+  ESP_LOGI(TAG, "Connected to the network, connecting to MQTT");
+  MQTT::mqtt_connect(Config::config_mqtt_host_get(), Config::config_mqtt_port_get(),
+                     Config::config_mqtt_client_id_get(), Config::config_mqtt_username_get(),
+                     Config::config_mqtt_password_get(), Config::config_mqtt_ssl_get(),
+                     Config::config_mqtt_server_cert_get(), Config::config_mqtt_client_cert_get(),
+                     Config::config_mqtt_client_key_get());
+}
+
+static void network_on_disconnected(void) {
+  Log::log_stop();
+  ESP_LOGI(TAG, "Disconnected from the network, stopping MQTT");
+  MQTT::mqtt_disconnect();
+  /* We don't get notified when manually stopping MQTT */
+  cleanup();
+}
+
+/* MQTT callback functions */
+static void mqtt_on_connected(void) {
+  ESP_LOGI(TAG, "Connected to MQTT, scanning for BLE devices");
+  self_publish();
+  ota_subscribe();
+}
+
+static void mqtt_on_disconnected(void) {
+  static uint8_t num_disconnections = 0;
+
+  ESP_LOGI(TAG, "Disconnected from MQTT, stopping BLE");
+  cleanup();
+
+  if (++num_disconnections % 3 == 0) {
+    ESP_LOGI(TAG, "Failed connecting to MQTT 3 times, reconnecting to the network");
+    // wifi_reconnect();
+  }
+}
+
+/* BLE2MQTT Task and event callbacks */
+typedef enum {
+  EVENT_TYPE_HEARTBEAT_TIMER,
+  EVENT_TYPE_NETWORK_CONNECTED,
+  EVENT_TYPE_NETWORK_DISCONNECTED,
+  EVENT_TYPE_OTA_COMPLETED,
+  EVENT_TYPE_MQTT_CONNECTED,
+  EVENT_TYPE_MQTT_DISCONNECTED,
+} event_type_t;
+
+typedef struct {
+  event_type_t type;
+  union {
+    struct {
+      OTA::TYPE type;
+      OTA::ERR err;
+    } ota_completed;
+  };
+} event_t;
+
+static QueueHandle_t event_queue;
+
+static void ble2mqtt_handle_event(event_t *event) {
+  switch (event->type) {
+  case EVENT_TYPE_HEARTBEAT_TIMER:
+    uptime_publish();
+    break;
+  case EVENT_TYPE_NETWORK_CONNECTED:
+    network_on_connected();
+    break;
+  case EVENT_TYPE_NETWORK_DISCONNECTED:
+    network_on_disconnected();
+    break;
+  case EVENT_TYPE_OTA_COMPLETED:
+    ota_on_completed(event->ota_completed.type, event->ota_completed.err);
+    break;
+  case EVENT_TYPE_MQTT_CONNECTED:
+    mqtt_on_connected();
+    break;
+  case EVENT_TYPE_MQTT_DISCONNECTED:
+    mqtt_on_disconnected();
+    break;
+  }
+  free(event);
+}
+
+static void ble2mqtt_task(void *pvParameter) {
+  event_t *event;
+
+  while (1) {
+    if (xQueueReceive(event_queue, &event, portMAX_DELAY) != pdTRUE)
+      continue;
+
+    ble2mqtt_handle_event(event);
+  }
+
+  vTaskDelete(NULL);
+}
+
+static void heartbeat_timer_cb(TimerHandle_t xTimer) {
+  event_t *event = (event_t *)malloc(sizeof(*event));
+
+  event->type = EVENT_TYPE_HEARTBEAT_TIMER;
+
+  ESP_LOGD(TAG, "Queuing event HEARTBEAT_TIMER");
+  xQueueSend(event_queue, &event, portMAX_DELAY);
+}
+
+static int start_ble2mqtt_task(void) {
+  TimerHandle_t hb_timer;
+
+  if (!(event_queue = xQueueCreate(10, sizeof(event_t *))))
+    return -1;
+
+  if (xTaskCreatePinnedToCore(ble2mqtt_task, "ble2mqtt_task", 4096, NULL, 5, NULL, 1) != pdPASS) {
+    return -1;
+  }
+
+  hb_timer = xTimerCreate("heartbeat", pdMS_TO_TICKS(60 * 1000), pdTRUE, NULL, heartbeat_timer_cb);
+  xTimerStart(hb_timer, 0);
+
+  return 0;
+}
+
+static void _network_on_connected(void) {
+  event_t *event = (event_t *)malloc(sizeof(*event));
+
+  event->type = EVENT_TYPE_NETWORK_CONNECTED;
+
+  ESP_LOGD(TAG, "Queuing event NETWORK_CONNECTED");
+  xQueueSend(event_queue, &event, portMAX_DELAY);
+}
+
+static void _network_on_disconnected(void) {
+  event_t *event = (event_t *)malloc(sizeof(*event));
+
+  event->type = EVENT_TYPE_NETWORK_DISCONNECTED;
+
+  ESP_LOGD(TAG, "Queuing event NETWORK_DISCONNECTED");
+  xQueueSend(event_queue, &event, portMAX_DELAY);
+}
+
+static void _ota_on_completed(OTA::TYPE type, OTA::ERR err) {
+  event_t *event = (event_t *)malloc(sizeof(*event));
+
+  event->type = EVENT_TYPE_OTA_COMPLETED;
+  event->ota_completed.type = type;
+  event->ota_completed.err = err;
+
+  ESP_LOGD(TAG, "Queuing event HEARTBEAT_TIMER (%d, %d)", (int)type, (int)err);
+  xQueueSend(event_queue, &event, portMAX_DELAY);
+}
+
+static void _mqtt_on_connected(void) {
+  event_t *event = (event_t *)malloc(sizeof(*event));
+
+  event->type = EVENT_TYPE_MQTT_CONNECTED;
+
+  ESP_LOGD(TAG, "Queuing event MQTT_CONNECTED");
+  xQueueSend(event_queue, &event, portMAX_DELAY);
+}
+
+static void _mqtt_on_disconnected(void) {
+  event_t *event = (event_t *)malloc(sizeof(*event));
+
+  event->type = EVENT_TYPE_MQTT_DISCONNECTED;
+
+  ESP_LOGD(TAG, "Queuing event MQTT_DISCONNECTED");
+  xQueueSend(event_queue, &event, portMAX_DELAY);
+}
 
 void app_main() {
   /* Setup Loggin */
@@ -328,6 +608,29 @@ void wifi_callback(wifi_prov_mgr::WifiConnectionState_t state) {
   if (state.wifiState == wifi_prov_mgr::WifiAssociationState::CONNECTED && !connected) {
     ESP_LOGI(TAG, "Wifi connected initializing controller");
     connected = true;
+    int config_failed;
+    ESP_LOGI(TAG, "Version: %s", BLE2MQTT_VER);
+
+    /* Init configuration */
+    config_failed = Config::config_initialize();
+
+    /* Init mDNS */
+    ESP_ERROR_CHECK(mdns_init());
+    mdns_hostname_set(wifi_prov_mgr::wifi_prov_mgr::get_hostname());
+
+    /* Init MQTT */
+    // ESP_ERROR_CHECK(mqtt_initialize());
+    // mqtt_set_on_connected_cb(_mqtt_on_connected);
+    // mqtt_set_on_disconnected_cb(_mqtt_on_disconnected);
+
+    /* Init web server */
+    httpd::httpd *http_server = new httpd::httpd();
+    ESP_ERROR_CHECK(http_server->init());
+    http_server->set_on_ota_completed_cb(_ota_on_completed);
+
+    /* Start BLE2MQTT task */
+    // ESP_ERROR_CHECK(start_ble2mqtt_task());
+
     xTaskCreate(temperature_sensor_task, "ZONE_A", 2560, (void *)&ZONE_A_CONFIG, 2, NULL);
     xTaskCreate(temperature_sensor_task, "ZONE_B", 2560, (void *)&ZONE_B_CONFIG, 2, NULL);
     vTaskDelay((TEMPERATURE_POLL_PERIOD_MS * 2) / portTICK_PERIOD_MS);
