@@ -138,7 +138,7 @@ static void self_publish(void) {
 }
 
 /* OTA functions */
-static void ota_on_completed(OTA::TYPE type, OTA::ERR err) {
+static void ota_on_completed(OTA::ERR err) {
   ESP_LOGI(TAG, "Update completed: %s", OTA::err_to_str(err));
 
   /* All done, restart */
@@ -149,7 +149,7 @@ static void ota_on_completed(OTA::TYPE type, OTA::ERR err) {
   }
 }
 
-static void _ota_on_completed(OTA::TYPE type, OTA::ERR err);
+static void _ota_on_completed(OTA::ERR err);
 
 static void ota_on_mqtt(const char *topic, const uint8_t *payload, size_t len, void *ctx) {
   char *url = (char *)malloc(len + 1);
@@ -264,7 +264,7 @@ static void ble2mqtt_handle_event(event_t *event) {
     network_on_disconnected();
     break;
   case EVENT_TYPE_OTA_COMPLETED:
-    ota_on_completed(event->ota_completed.type, event->ota_completed.err);
+    ota_on_completed(event->ota_completed.err);
     break;
   case EVENT_TYPE_MQTT_CONNECTED:
     mqtt_on_connected();
@@ -332,14 +332,14 @@ static void _network_on_disconnected(void) {
   xQueueSend(event_queue, &event, portMAX_DELAY);
 }
 
-static void _ota_on_completed(OTA::TYPE type, OTA::ERR err) {
+static void _ota_on_completed(OTA::ERR err) {
   event_t *event = (event_t *)malloc(sizeof(*event));
 
   event->type = EVENT_TYPE_OTA_COMPLETED;
-  event->ota_completed.type = type;
+  // event->ota_completed.type = type;
   event->ota_completed.err = err;
 
-  ESP_LOGD(TAG, "Queuing event HEARTBEAT_TIMER (%d, %d)", (int)type, (int)err);
+  ESP_LOGD(TAG, "Queuing event EVENT_TYPE_OTA_COMPLETED (%d)", (int)err);
   xQueueSend(event_queue, &event, portMAX_DELAY);
 }
 

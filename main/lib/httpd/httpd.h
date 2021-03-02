@@ -9,7 +9,7 @@
 
 namespace httpd {
 /* Event callback types */
-using httpd_on_ota_completed_cb_t = std::function<void(OTA::TYPE, OTA::ERR)>;
+using httpd_on_ota_completed_cb_t = std::function<void(OTA::ERR)>;
 
 class httpd {
 public:

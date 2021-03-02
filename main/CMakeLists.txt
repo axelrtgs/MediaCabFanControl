@@ -34,6 +34,8 @@ idf_component_register(
                           esp_http_client
                           esp_http_server
                           app_update
+                        EMBED_TXTFILES
+                          ${project_dir}/data/ca_cert.pem)
                         )
 
 target_compile_definitions(${COMPONENT_TARGET} PRIVATE

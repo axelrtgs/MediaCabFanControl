@@ -13,8 +13,7 @@ static void ota_delayed_reset_timer_cb(TimerHandle_t xTimer) {
   if (!on_ota_completed_cb)
     return;
 
-  OTA::TYPE ota_type = static_cast<OTA::TYPE>((int)pvTimerGetTimerID(xTimer));
-  on_ota_completed_cb(ota_type, OTA::ERR::SUCCESS);
+  on_ota_completed_cb(OTA::ERR::SUCCESS);
   xTimerDelete(xTimer, 0);
 }
 
@@ -104,7 +103,7 @@ esp_err_t httpd::register_ota_routes(httpd_handle_t server) {
 
 void httpd::set_on_ota_completed_cb(httpd_on_ota_completed_cb_t cb) {
   using namespace std::placeholders;
-  on_ota_completed_cb = std::bind(cb, _1, _2);
+  on_ota_completed_cb = std::bind(cb, _1);
 }
 
 esp_err_t httpd::init() {
